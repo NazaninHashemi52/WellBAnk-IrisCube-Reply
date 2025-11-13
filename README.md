@@ -19,7 +19,7 @@ This document describes the structure and purpose of the three main datasets use
 | **codice_fiscale** | Fiscal code of the customer | String | Synthetic identifier derived from name, surname, and date of birth |
 | **codice_attivita** | Code of the customer’s main economic activity | String | If the customer is **not employed**, the code starts with **X** (e.g. student, unemployed, retired); otherwise, it contains **4 characters** identifying the activity described in `descrizione_attivita` |
 | **descrizione_attivita** | Text description of the economic activity | String | Examples: “Shop owner”, “Bank employee”, “Retired” |
-| **posizione_attivita** | Professional position or job role | String (`OPE`, `IMP`, `QUA`, `ALT`) | **OPE** = Worker · **IMP** = Employee · **QUA** = Executive/Manager · **ALT** = Other |
+| **posizione_attivita** | Professional position or job role | String (`OPE`, `IMP`, `QUA`, `IND`, `ALT`) | **OPE** = Worker · **IMP** = Employee · **QUA** = Executive/Manager · **IND** = Self-employed · **ALT** = Other |
 | **stato_civile** | Marital status | String (`CLNB`, `SPDV`, `VEDV`, `CONI`, `CONF`, `GESF`) | **CLNB** = Single · **SPDV** = Separated/Divorced · **VEDV** = Widowed · **CONI** = Married · **CONF** = Married with children · **GESF** = Single parent with children |
 | **segmento_economico** | Customer’s economic segment | String (`MM`, `SB`, `AF`) | **MM** = Mass Market (private clients with assets <100K €) · **SB** = Small Business (economic operators and small enterprises) · **AF** = Affluent (private clients with assets between 100K–500K €) |
 
@@ -48,6 +48,10 @@ This document describes the structure and purpose of the three main datasets use
 | **macrocategoria** | Main spending category | String | Examples: “Famiglia”, “Entrate”, “Casa” |
 | **categoria** | Detailed spending category | String | Examples: “Gas & energia elettrica”, “TV, Internet, telefono”, “Trasporti, noleggi, taxi e parcheggi”, etc. |
 | **importo** | Transaction amount | Decimal (float) | Positive for inflows, negative for outflows (depending on banking context) |
+| **saldo_precedente** | Account balance **immediately before** applying the transaction | Decimal (float) | — |
+| **saldo_attuale** | Account balance **after** applying the transaction | Decimal (float) | Calculated as `saldo_precedente + transaction_amount`. |
+
+
 
 ---
 
