@@ -54,10 +54,12 @@ Desktop.ini
 *.pyo
 *.pyd
 
-# Uploads (optional - uncomment if you don't want to commit uploads)
-# backend/uploads/
+# Uploads (exclude large CSV files - they exceed GitHub's 100MB limit)
+backend/uploads/**/*.csv
+backend/uploads/anagrafiche/
+backend/uploads/movimenti/
+backend/uploads/prodotti/
 
 # Models (optional - uncomment if models are too large)
 # backend/models/*.pkl
 # backend/models/*.joblib
-
