@@ -1,0 +1,57 @@
+// src/api/offers.js
+import { API_BASE_URL, apiRequest } from './config';
+
+export async function getOfferCatalog() {
+  return apiRequest(`${API_BASE_URL}/offers/catalog`);
+}
+
+export async function getRealtimeRecommendations(customerId, topN = 3) {
+  const params = new URLSearchParams();
+  params.append('top_n', topN.toString());
+  return apiRequest(`${API_BASE_URL}/offers/recommend/${customerId}?${params.toString()}`);
+}
+
+export async function getPendingRecommendations(status = 'pending', limit = 50, offset = 0) {
+  const params = new URLSearchParams();
+  params.append('status', status);
+  params.append('limit', limit.toString());
+  params.append('offset', offset.toString());
+  return apiRequest(`${API_BASE_URL}/offers/recommendations?${params.toString()}`);
+}
+
+export async function getRecommendationById(recommendationId) {
+  return apiRequest(`${API_BASE_URL}/offers/recommendations/${recommendationId}`);
+}
+
+export async function regenerateMessage(recommendationId, tone = 'friendly') {
+  return apiRequest(`${API_BASE_URL}/offers/recommendations/${recommendationId}/regenerate-message`, {
+    method: 'POST',
+    body: JSON.stringify({ tone }),
+  });
+}
+
+export async function changeService(recommendationId, productCode) {
+  return apiRequest(`${API_BASE_URL}/offers/recommendations/${recommendationId}/change-service`, {
+    method: 'POST',
+    body: JSON.stringify({ product_code: productCode }),
+  });
+}
+
+export async function makeDecision(recommendationId, action, message = null, reason = null) {
+  const body = { action };
+  if (message) body.message = message;
+  if (reason) body.reason = reason;
+  
+  return apiRequest(`${API_BASE_URL}/offers/recommendations/${recommendationId}/decision`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export async function generateOnDemandRecommendation(customerId, topN = 3) {
+  return apiRequest(`${API_BASE_URL}/offers/recommendations/on-demand`, {
+    method: 'POST',
+    body: JSON.stringify({ customer_id: customerId, top_n: topN }),
+  });
+}
+

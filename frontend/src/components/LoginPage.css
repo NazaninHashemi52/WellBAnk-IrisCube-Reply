@@ -1,0 +1,410 @@
+/* Ensure all elements calculate width correctly */
+* {
+    box-sizing: border-box;
+  }
+  
+  .wbl-root {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    position: relative;
+    background: #05010d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Public Sans', sans-serif;
+    font-size: 16px; /* 2026 standard minimum */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* --- Fixed Main Container --- */
+  .wbl-bg {
+    position: relative;
+    width: 90vw;
+    aspect-ratio: 1.5 / 1;
+    max-height: 90vh;
+    max-width: calc(90vh * 1.5);
+    z-index: 1;
+    overflow: hidden;
+    border-radius: 32px;
+    background: #05010d;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 120px rgba(0, 0, 0, 1);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  .wbl-bg-img {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+    opacity: 0.85;
+  }
+  
+  /* --- New Back Button Styling --- */
+  .wbl-nav-overlay {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    z-index: 9999;
+    pointer-events: auto;
+  }
+  
+  .new-back-circle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 10px 20px;
+    border-radius: 50px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    pointer-events: auto;
+    outline: none;
+  }
+  
+  .new-back-circle:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateX(-5px);
+  }
+
+  .new-back-circle:active {
+    transform: translateX(-5px) scale(0.95);
+  }
+  
+  /* --- Login Content & Card --- */
+  .wbl-login-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    padding: 20px;
+  }
+  
+  .new-glass-card {
+    position: relative;
+    width: 100%;
+    max-width: 480px; /* Adjusted to fit better */
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+  
+  .glass-card-inner {
+    padding: 50px 40px;
+  }
+  
+  .new-welcome-text {
+    color: white;
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 35px;
+  }
+  
+  /* --- Fixed Input Sizing --- */
+  .new-input-box {
+    position: relative;
+    margin-bottom: 20px;
+    width: 100%; /* Ensure full width of the parent */
+  }
+  
+  .new-icon {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #4fd8eb;
+    font-size: 1.1rem;
+    z-index: 5;
+  }
+  
+  .new-input-box input {
+    width: 100%; /* Important: Takes up 100% of the box */
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 16px 16px 16px 50px; /* Padding for the icon */
+    color: white;
+    font-size: 16px; /* 2026 standard minimum */
+    outline: none;
+    transition: var(--wb-transition);
+  }
+  
+  .new-input-box input:focus {
+    border-color: #4fd8eb;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(79, 216, 235, 0.15);
+  }
+  
+  .new-input-box input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 16px;
+  }
+  
+  /* --- Submit & Footer --- */
+  .new-submit-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 25px;
+    margin-bottom: 20px;
+  }
+
+  .new-login-btn {
+    width: 100%; /* Full width for better mobile/smaller card look */
+    max-width: 250px;
+    padding: 16px 24px;
+    background: linear-gradient(90deg, #8E2DE2, #4FD8EB);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-weight: 600;
+    font-size: 16px; /* 2026 standard minimum */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    text-align: center;
+    transition: var(--wb-transition);
+    box-shadow: var(--wb-shadow);
+  }
+  
+  .new-login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--wb-shadow-md);
+  }
+  
+  .new-login-btn:active {
+    transform: translateY(0);
+  }
+
+  .new-footer {
+    margin-top: 25px;
+    text-align: center;
+  }
+
+  .new-forgot {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    font-size: 16px; /* 2026 standard minimum */
+    display: inline-block;
+    text-align: center;
+    transition: var(--wb-transition);
+  }
+  
+  .new-forgot:hover {
+    color: #4fd8eb;
+  }
+  
+  .new-social-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  
+  .new-social-pill, .new-social-circle {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  
+  .new-social-pill { 
+    padding: 10px 18px; 
+    border-radius: 12px; 
+    font-size: 14px; 
+    transition: var(--wb-transition);
+  }
+  .new-social-pill:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  .new-social-circle { 
+    width: 40px; 
+    height: 40px; 
+    border-radius: 12px; 
+    transition: var(--wb-transition);
+  }
+  .new-social-circle:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+  }
+  
+  /* Background Orbs */
+  .wbl-icon-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(100px);
+    z-index: 0;
+    opacity: 0.4;
+  }
+  .orb-1 { width: 400px; height: 400px; background: #6750A4; top: -10%; left: -5%; }
+  .orb-2 { width: 300px; height: 300px; background: #4FD8EB; bottom: 5%; right: -5%; }
+  .orb-3 { width: 200px; height: 200px; background: #B3261E; top: 20%; right: 10%; }
+
+  /* Dashboard Content Styling within wbl-bg container */
+  .wbl-bg .wb-glass-container {
+    height: calc(100% - 40px);
+    width: calc(100% - 40px);
+  }
+
+  .wbl-bg .wb-dashboard {
+    height: 100%;
+    width: 100%;
+    background: transparent;
+  }
+
+  .wbl-bg .wb-datasets-content {
+    height: 100%;
+    width: 100%;
+    background: transparent;
+  }
+
+  .wbl-bg .wb-sidebar {
+    flex-shrink: 0;
+  }
+
+  .wbl-bg .wb-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .wbl-bg .wb-main-content {
+    height: 100%;
+  }
+
+  /* ============================================================
+     Full-Width Dashboard Layout (for Dashboard/Command Center pages)
+     ============================================================ */
+  
+  /* Full-width root for dashboard pages - Art-Grade Galaxy Theme */
+  .wbd-root {
+    min-height: 100vh;
+    width: 100vw;
+    overflow-x: hidden;
+    position: relative;
+    background: #0B0E14; /* Deep Obsidian - Art-Grade Galaxy */
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    color: #E2E8F0; /* Silver-White text */
+  }
+
+  /* Full-width background container - Deep Obsidian with Ambient Orbs */
+  .wbd-bg {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    background: #0B0E14; /* Deep Obsidian Base */
+    /* Ambient Orbs - Glowing radial gradients for luminous atmosphere */
+    background-image: 
+      radial-gradient(circle at 15% 15%, rgba(79, 70, 229, 0.15) 0%, transparent 60%), /* Soft Indigo - Top-Left */
+      radial-gradient(circle at 85% 85%, rgba(124, 58, 237, 0.10) 0%, transparent 60%); /* Deep Violet - Bottom-Right */
+  }
+
+  .wbd-bg-img {
+    position: fixed;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+    opacity: 0; /* Hide the old background image */
+    pointer-events: none;
+  }
+
+  /* Main content container - Wide, Expansive Layout for Professional Dashboards */
+  .wbd-container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    max-width: 1920px; /* Wide, expansive - screen-2xl equivalent (1536px) but even wider for professional feel */
+    margin: 0 auto;
+    padding: 24px 32px; /* More horizontal padding for wide layout */
+    min-height: 100vh;
+  }
+  
+  /* Extra wide for Data Management and Clustering Results pages */
+  .wbd-container-wide {
+    max-width: 100%; /* Full width for maximum expansiveness */
+    padding: 24px 40px; /* Generous padding */
+  }
+
+  /* Responsive padding adjustments */
+  @media (max-width: 1600px) {
+    .wbd-container {
+      padding: 24px 28px;
+    }
+    .wbd-container-wide {
+      padding: 24px 32px;
+    }
+  }
+
+  @media (max-width: 1200px) {
+    .wbd-container {
+      padding: 20px 24px;
+    }
+    .wbd-container-wide {
+      padding: 20px 28px;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    .wbd-container {
+      padding: 20px;
+    }
+    .wbd-container-wide {
+      padding: 20px 24px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .wbd-container {
+      padding: 16px;
+    }
+    .wbd-container-wide {
+      padding: 16px 20px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .wbd-container {
+      padding: 12px;
+    }
+    .wbd-container-wide {
+      padding: 12px 16px;
+    }
+  }
+
+  /* Glass container for dashboard pages - Layered Look */
+  .wbd-glass-container {
+    position: relative;
+    z-index: 10;
+    width: 100%;
+    min-height: calc(100vh - 48px);
+    background: transparent; /* Transparent to show light gray background */
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  /* Navigation overlay for full-width pages - DEPRECATED: Back button now in content flow */
+  .wbd-nav-overlay {
+    display: none; /* Hidden - back button is now in content flow */
+  }

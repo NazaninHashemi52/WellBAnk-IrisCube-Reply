@@ -1,0 +1,1213 @@
+/* ============================================================
+   WellBank Employee Dashboard - Professional Banking Design
+   Unified Color Scheme & Modern UX
+   ============================================================ */
+
+/* ============================================================
+   WELLBANK UNIFIED DESIGN SYSTEM - 2026 Banking Standards
+   ============================================================ */
+
+/* Color Palette - Trustworthy Banking Colors */
+:root {
+  /* Primary Colors */
+  --wb-primary: #1e40af;        /* Deep Blue - Trust & Stability */
+  --wb-primary-light: #3b82f6;   /* Lighter Blue - Modern */
+  --wb-primary-dark: #1e3a8a;   /* Darker Blue - Authority */
+  
+  /* Secondary Colors */
+  --wb-secondary: #0f766e;       /* Teal - Growth & Innovation */
+  --wb-accent: #22D3EE;          /* Electric Cyan - Wellbank Glow (Neon accent) */
+  
+  /* Status Colors */
+  --wb-success: #10b981;         /* Green - Success */
+  --wb-warning: #f59e0b;         /* Amber - Alerts */
+  --wb-error: #ef4444;           /* Red - Critical */
+  --wb-info: #3b82f6;            /* Blue - Information */
+  
+  /* Background Colors - Art-Grade Galaxy */
+  --wb-bg-primary: #0B0E14;      /* Deep Obsidian - Main Background */
+  --wb-bg-secondary: rgba(30, 41, 59, 0.5);     /* Semi-transparent Dark Gray - Glass Panels */
+  --wb-bg-tertiary: rgba(30, 41, 59, 0.3);     /* Lighter transparent - Subtle Backgrounds */
+  --wb-bg-dark: #0B0E14;         /* Deep Obsidian */
+  --wb-bg-glass: rgba(30, 41, 59, 0.5);  /* Glassmorphic panels */
+  --wb-bg-glass-hover: rgba(30, 41, 59, 0.6); /* Slightly lighter on hover */
+  
+  /* Text Colors - Silver-White for High Contrast */
+  --wb-text-primary: #E2E8F0;    /* Silver-White - Primary Text */
+  --wb-text-secondary: #94A3B8;  /* Muted Slate - Secondary Text */
+  --wb-text-tertiary: rgba(226, 232, 240, 0.6);  /* Tertiary Text */
+  --wb-text-muted: #94A3B8;     /* Muted Slate */
+  
+  /* Border Colors */
+  --wb-border: rgba(255, 255, 255, 0.1);         /* Standard Border */
+  --wb-border-light: rgba(255, 255, 255, 0.08);  /* Light Border */
+  --wb-border-strong: rgba(255, 255, 255, 0.15); /* Strong Border */
+  
+  /* Shadow System - Soft Shadows & Glassmorphism (2026 Standard) */
+  --wb-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --wb-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --wb-shadow-md: 0 6px 20px rgba(0, 0, 0, 0.15);
+  --wb-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.18);
+  --wb-shadow-none: none;
+  
+  /* Glassmorphism - Art-Grade Galaxy (Frosted Glass) */
+  --wb-glass-bg: rgba(30, 41, 59, 0.5); /* Semi-transparent Dark Gray */
+  --wb-glass-bg-hover: rgba(30, 41, 59, 0.6);
+  --wb-glass-blur: blur(12px); /* Glass blur effect */
+  --wb-glass-border: rgba(255, 255, 255, 0.1); /* Light-catcher border */
+
+  /* Typography Scale - 2026 Banking Standards */
+  --wb-font-xs: 12px;            /* Extra small - rarely used */
+  --wb-font-sm: 14px;            /* Small - labels, metadata */
+  --wb-font-base: 16px;          /* Base - body text (2026 standard minimum) */
+  --wb-font-lg: 18px;            /* Large - emphasized text */
+  --wb-font-xl: 20px;            /* Extra large - section titles */
+  --wb-font-2xl: 24px;           /* 2XL - page titles */
+  --wb-font-3xl: 32px;           /* 3XL - hero numbers */
+  --wb-font-4xl: 40px;           /* 4XL - large hero numbers */
+  
+  /* Semantic Typography Tokens */
+  --wb-font-page-title: var(--wb-font-2xl);      /* 24px */
+  --wb-font-section-title: var(--wb-font-xl);    /* 20px */
+  --wb-font-body: var(--wb-font-base);           /* 16px - minimum for accessibility */
+  --wb-font-label: var(--wb-font-sm);            /* 14px */
+  --wb-font-hero: var(--wb-font-3xl);           /* 32px */
+  --wb-font-hero-large: var(--wb-font-4xl);     /* 40px */
+  
+  /* Spacing System - Consistent 4px base unit */
+  --wb-space-1: 4px;
+  --wb-space-2: 8px;
+  --wb-space-3: 12px;
+  --wb-space-4: 16px;
+  --wb-space-5: 20px;
+  --wb-space-6: 24px;
+  --wb-space-8: 32px;
+  --wb-space-10: 40px;
+  --wb-space-12: 48px;
+  
+  /* Border Radius System - 2026 Modern Standard */
+  --wb-radius-sm: 12px;          /* Small elements - Modern rounded */
+  --wb-radius: 12px;              /* Standard - Modern rounded */
+  --wb-radius-md: 14px;          /* Cards, buttons - Modern rounded */
+  --wb-radius-lg: 16px;          /* Large cards - Modern rounded */
+  --wb-radius-xl: 16px;          /* Extra large cards - Modern rounded */
+  --wb-radius-full: 9999px;      /* Pills, circles */
+  
+  /* Wellbank Blue - Single Accent Color */
+  --wb-blue: #1e40af;            /* Wellbank Blue - Use only for buttons */
+  --wb-blue-light: #3b82f6;      /* Lighter Wellbank Blue */
+  
+  /* Calm Neutrals */
+  --wb-neutral-50: rgba(255, 255, 255, 0.05);
+  --wb-neutral-100: rgba(255, 255, 255, 0.08);
+  --wb-neutral-200: rgba(255, 255, 255, 0.12);
+  --wb-neutral-300: rgba(255, 255, 255, 0.15);
+  --wb-neutral-text: rgba(255, 255, 255, 0.9);
+  --wb-neutral-text-muted: rgba(255, 255, 255, 0.6);
+  --wb-neutral-text-subtle: rgba(255, 255, 255, 0.5);
+  
+  /* Transitions - Fast and Accurate (2026 Standard) */
+  --wb-transition-fast: 150ms ease;
+  --wb-transition: 200ms ease; /* Fast fade/slide for trust */
+  --wb-transition-slow: 300ms ease;
+}
+
+/* Typography - Inter for data, Space Grotesk for headers (Art-Grade Galaxy) */
+.wb-dashboard {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-size: 16px; /* Base: 1rem (2026 accessibility standard) */
+  color: var(--wb-text-primary); /* Silver-White */
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'liga' 1, 'kern' 1, 'tnum' 1; /* Tabular numbers for data */
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+
+/* Space Grotesk for headers - Galaxy/AI edge */
+.wb-header-title,
+h1, h2, h3 {
+  font-family: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  font-weight: 600;
+  color: var(--wb-text-primary); /* Silver-White */
+}
+
+/* Glassmorphism Container - Frosted Glass (Art-Grade Galaxy) */
+.wb-glass-container {
+  position: relative;
+  z-index: 10;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: transparent; /* Transparent to show ambient orbs */
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 0;
+  border: none;
+  margin: 0;
+  box-shadow: none;
+}
+
+/* Main Dashboard Container */
+.wb-dashboard {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  background: transparent;
+  overflow: hidden;
+  gap: 0; /* No gap between sidebar and main content for seamless wide layout */
+  align-items: stretch;
+}
+
+/* Sidebar - Glassmorphic Dark (Art-Grade Galaxy) */
+.wb-sidebar {
+  width: 280px; /* Standard width */
+  min-width: 80px; /* Minimum width when collapsed */
+  background: rgba(30, 41, 59, 0.5); /* Semi-transparent Dark Gray - Glass effect */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #E2E8F0; /* Silver-White text */
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 10;
+  border-right: 1px solid rgba(255, 255, 255, 0.1); /* Light-catcher border */
+  flex-shrink: 0;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Fast transition */
+  position: sticky; /* Sticky sidebar */
+  top: 0;
+  height: 100vh;
+}
+
+/* Responsive sidebar */
+@media (max-width: 1200px) {
+  .wb-sidebar {
+    width: 240px;
+    min-width: 220px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .wb-sidebar {
+    width: 220px;
+    min-width: 200px;
+  }
+}
+
+/* Removed gradient overlay - clean dark slate */
+
+/* User Profile Section - Glassmorphic Dark (Art-Grade Galaxy) */
+.wb-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px;
+  background: rgba(30, 41, 59, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s ease;
+}
+
+.wb-profile:hover {
+  background: rgba(30, 41, 59, 0.4);
+}
+
+.wb-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(34, 211, 238, 0.15); /* Electric Cyan tint */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.wb-profile:hover .wb-avatar {
+  transform: scale(1.05);
+  background: rgba(34, 211, 238, 0.2);
+  border-color: rgba(34, 211, 238, 0.4);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.3); /* Glow effect */
+}
+
+.wb-avatar svg {
+  color: #22D3EE; /* Electric Cyan */
+}
+
+.wb-profile-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.wb-profile-name {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #E2E8F0; /* Silver-White */
+  line-height: 1.3;
+}
+
+.wb-profile-email {
+  font-size: 12px;
+  color: #94A3B8; /* Muted Slate */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+/* Navigation Menu - Compact */
+.wb-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  padding: 8px 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.wb-nav-section {
+  margin-bottom: 12px;
+}
+
+.wb-nav-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #94A3B8; /* Muted Slate */
+  padding: 6px 12px;
+  margin-bottom: 4px;
+}
+
+.wb-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: #E2E8F0; /* Silver-White */
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  position: relative;
+  width: 100%;
+  margin-bottom: 2px;
+  line-height: 1.4;
+}
+
+.wb-nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 4px;
+  height: 0;
+  background: linear-gradient(180deg, #22D3EE 0%, rgba(34, 211, 238, 0.6) 100%); /* Electric Cyan */
+  border-radius: 0 4px 4px 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wb-nav-item:hover {
+  background: rgba(34, 211, 238, 0.1); /* Electric Cyan tint */
+  color: #E2E8F0; /* Silver-White */
+  transform: translateX(4px);
+  padding-left: 20px;
+}
+
+.wb-nav-item:hover::before {
+  transform: translateY(-50%) scaleY(1);
+  height: 60%;
+}
+
+.wb-nav-item.active {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.15), rgba(34, 211, 238, 0.1)); /* Electric Cyan */
+  color: #22D3EE; /* Electric Cyan */
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(34, 211, 238, 0.2), 0 0 0 1px rgba(34, 211, 238, 0.3); /* Glow effect */
+  border: 1px solid rgba(34, 211, 238, 0.3);
+}
+
+.wb-nav-item.active::before {
+  transform: translateY(-50%) scaleY(1);
+  height: 24px;
+  width: 4px;
+  background: linear-gradient(180deg, #22D3EE, rgba(34, 211, 238, 0.8)); /* Electric Cyan */
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.6);
+  opacity: 1;
+}
+
+.wb-nav-item.active:hover {
+  transform: translateX(0);
+  padding-left: 16px;
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.2), rgba(34, 211, 238, 0.15));
+  box-shadow: 0 2px 12px rgba(34, 211, 238, 0.3), 0 0 0 1px rgba(34, 211, 238, 0.4);
+}
+
+.wb-nav-item svg {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  transition: all 0.25s ease;
+  color: #E2E8F0; /* Silver-White icons */
+}
+
+.wb-nav-item:hover svg {
+  transform: scale(1.05);
+  color: #E2E8F0; /* Silver-White */
+}
+
+.wb-nav-item.active svg {
+  color: #22D3EE; /* Electric Cyan for active state */
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.6));
+}
+
+.wb-nav-item span {
+  flex: 1;
+  text-align: left;
+}
+
+/* Main Content Area */
+.wb-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: transparent;
+  min-width: 0; /* Allows flex item to shrink below content size */
+  margin-left: 0; /* No margin - uses flexbox spacing */
+}
+
+.wb-main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px; /* More generous padding for wide layout */
+  max-height: 100vh;
+  min-width: 0; /* Prevents overflow issues */
+  width: 100%; /* Ensure full width utilization */
+}
+
+/* Extra wide content padding for Data Management and Clustering Results */
+.wb-main-content-wide {
+  padding: 32px 40px !important; /* Even more generous for wide pages */
+}
+
+/* Responsive padding for main content */
+@media (max-width: 1600px) {
+  .wb-main-content {
+    padding: 24px 28px;
+  }
+  .wb-main-content-wide {
+    padding: 28px 36px !important;
+  }
+}
+
+@media (max-width: 1200px) {
+  .wb-main-content {
+    padding: 20px 24px;
+  }
+  .wb-main-content-wide {
+    padding: 24px 32px !important;
+  }
+}
+
+@media (max-width: 1024px) {
+  .wb-main-content {
+    padding: 20px;
+  }
+  .wb-main-content-wide {
+    padding: 20px 24px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .wb-main-content {
+    padding: 16px;
+  }
+  .wb-main-content-wide {
+    padding: 16px 20px !important;
+  }
+}
+
+/* Header Section */
+.wb-header {
+  margin-bottom: 24px;
+}
+
+.wb-header-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #E2E8F0; /* Silver-White */
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+}
+
+.wb-header-subtitle {
+  font-size: 14px;
+  color: #94A3B8; /* Muted Slate */
+  font-weight: 400;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Stats Cards Grid */
+.wb-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.wb-stat-card {
+  background: rgba(30, 41, 59, 0.5); /* Glassmorphic Dark Gray */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Light-catcher border */
+  transition: all 0.2s ease; /* Fast transition */
+}
+
+.wb-stat-card:hover {
+  background: rgba(30, 41, 59, 0.6); /* Slightly brighter on hover */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(34, 211, 238, 0.2); /* Glow effect */
+  transform: translateY(-2px);
+  border-color: rgba(34, 211, 238, 0.3); /* Electric Cyan glow */
+}
+
+.wb-stat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.wb-stat-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #94A3B8; /* Muted Slate */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.wb-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.wb-stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 4px;
+  line-height: 1.2;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.wb-stat-change {
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.wb-stat-change.positive {
+  color: var(--wb-success);
+}
+
+.wb-stat-change.negative {
+  color: var(--wb-error);
+}
+
+/* Data Table */
+.wb-table-container {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.wb-table-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--wb-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wb-table-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.wb-table-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.wb-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wb-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.wb-btn-primary {
+  background: rgba(30, 64, 175, 0.8);
+  color: #ffffff;
+  border-color: rgba(30, 64, 175, 0.6);
+}
+
+.wb-btn-primary:hover {
+  background: rgba(30, 64, 175, 0.95);
+  border-color: rgba(30, 64, 175, 0.8);
+}
+
+.wb-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.wb-table thead {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.wb-table th {
+  padding: 12px 24px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.wb-table td {
+  padding: 16px 24px;
+  font-size: 14px;
+  color: #ffffff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.wb-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.wb-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.wb-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Badge/Status */
+.wb-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.wb-badge-success {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--wb-success);
+}
+
+.wb-badge-warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--wb-warning);
+}
+
+.wb-badge-error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--wb-error);
+}
+
+.wb-badge-info {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--wb-primary-light);
+}
+
+/* Search Bar */
+.wb-search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+.wb-search-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+.wb-search-input:focus {
+  outline: none;
+  border-color: rgba(79, 216, 235, 0.6);
+  box-shadow: 0 0 0 2px rgba(79, 216, 235, 0.15);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.wb-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Scrollbar Styling - Modern */
+.wb-sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.wb-sidebar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.wb-sidebar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, 
+    rgba(79, 216, 235, 0.4) 0%, 
+    rgba(79, 216, 235, 0.2) 100%);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: all 0.2s ease;
+}
+
+.wb-sidebar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, 
+    rgba(79, 216, 235, 0.6) 0%, 
+    rgba(79, 216, 235, 0.4) 100%);
+  background-clip: padding-box;
+}
+
+.wb-main-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.wb-main-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.wb-main-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.wb-main-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+  background-clip: padding-box;
+}
+
+/* Modern Back Button Styles */
+.wb-back-button {
+  position: relative;
+  z-index: 10;
+}
+
+.wb-back-button:hover .wb-back-shine {
+  left: 100% !important;
+}
+
+.wb-back-button:active {
+  transform: translateX(-2px) scale(0.98) !important;
+}
+
+/* Back button icon animation */
+.wb-back-button:hover svg {
+  transform: translateX(-3px);
+}
+
+/* Responsive back button */
+@media (max-width: 768px) {
+  .wb-back-button {
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+  }
+  
+  .wb-back-button span {
+    display: none;
+  }
+  
+  .wb-back-button svg {
+    margin: 0;
+  }
+}
+
+.wb-datasets-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.wb-datasets-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.wb-datasets-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.wb-datasets-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+  background-clip: padding-box;
+}
+
+/* Sidebar Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.wb-sidebar {
+  animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wb-nav-item {
+  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: both;
+}
+
+.wb-nav-item:nth-child(1) { animation-delay: 0.05s; }
+.wb-nav-item:nth-child(2) { animation-delay: 0.1s; }
+.wb-nav-item:nth-child(3) { animation-delay: 0.15s; }
+.wb-nav-item:nth-child(4) { animation-delay: 0.2s; }
+.wb-nav-item:nth-child(5) { animation-delay: 0.25s; }
+.wb-nav-item:nth-child(6) { animation-delay: 0.3s; }
+.wb-nav-item:nth-child(7) { animation-delay: 0.35s; }
+.wb-nav-item:nth-child(8) { animation-delay: 0.4s; }
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .wb-sidebar {
+    width: 260px;
+  }
+  
+  .wb-stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .wb-dashboard {
+    flex-direction: column;
+  }
+  
+  .wb-sidebar {
+    width: 100%;
+    max-height: 300px;
+  }
+  
+  .wb-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   Dataset Management Page Styles
+   ============================================================ */
+
+.wb-datasets-content {
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.wb-datasets-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  gap: 24px;
+}
+
+.wb-datasets-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 8px;
+}
+
+.wb-datasets-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+
+.wb-datasets-subtitle {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.wb-datasets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+  flex: 1;
+}
+
+.wb-dataset-card {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.wb-dataset-card:hover {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.wb-dataset-card-header {
+  margin-bottom: 8px;
+}
+
+.wb-dataset-card-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.wb-dataset-card-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.wb-dataset-card-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 400;
+}
+
+.wb-dataset-dropzone {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wb-dataset-dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.wb-dataset-dropzone-content:hover {
+  border-color: rgba(79, 216, 235, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.wb-dataset-dropzone-text {
+  text-align: center;
+}
+
+.wb-dataset-dropzone-strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 6px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.wb-dataset-dropzone-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.wb-dataset-file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wb-dataset-file-input {
+  display: none;
+}
+
+.wb-dataset-file-meta {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wb-dataset-file-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  word-break: break-all;
+}
+
+.wb-dataset-file-size {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.wb-dataset-file-placeholder {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+}
+
+.wb-dataset-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wb-dataset-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wb-dataset-progress-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.wb-dataset-progress-pct {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.wb-dataset-progress-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.wb-dataset-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--wb-accent) 0%, rgba(79, 216, 235, 0.6) 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  box-shadow: 0 2px 6px rgba(79, 216, 235, 0.2);
+}
+
+.wb-dataset-progress-fill--done {
+  background: linear-gradient(90deg, var(--wb-success) 0%, rgba(16, 185, 129, 0.6) 100%);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+}
+
+.wb-dataset-progress-fill--error {
+  background: linear-gradient(90deg, var(--wb-error) 0%, rgba(239, 68, 68, 0.6) 100%);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+}
+
+.wb-dataset-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--wb-error);
+  font-weight: 500;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.wb-dataset-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--wb-success);
+  font-weight: 500;
+  padding: 8px 12px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.wb-dataset-card-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .wb-datasets-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .wb-datasets-header {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .wb-datasets-content {
+    padding: 20px;
+  }
+  
+  .wb-dataset-card {
+    padding: 20px;
+  }
+}
+
+/* ============================================================
+   Glassmorphic Detail Panels & Cards - Cosmic Professional
+   ============================================================ */
+
+/* Glassmorphic Detail Panels - Art-Grade Galaxy */
+.wb-glass-panel {
+  background: rgba(30, 41, 59, 0.5); /* Semi-transparent Dark Gray */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Light-catcher border */
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease; /* Fast transition */
+  color: #E2E8F0; /* Silver-White text */
+}
+
+.wb-glass-panel:hover {
+  background: rgba(30, 41, 59, 0.6); /* Slightly brighter - floating closer */
+  border-color: rgba(34, 211, 238, 0.3); /* Electric Cyan glow */
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(34, 211, 238, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Glassmorphic Cards - Art-Grade Galaxy */
+.wb-glass-card {
+  background: rgba(30, 41, 59, 0.5); /* Semi-transparent Dark Gray */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Light-catcher border */
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  color: #E2E8F0; /* Silver-White */
+}
+
+.wb-glass-card:hover {
+  background: rgba(30, 41, 59, 0.6); /* Brighten on hover */
+  border-color: rgba(34, 211, 238, 0.3); /* Border glow */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(34, 211, 238, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Spin animation for loading icons */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
