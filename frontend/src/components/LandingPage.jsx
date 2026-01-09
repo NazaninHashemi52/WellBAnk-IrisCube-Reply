@@ -100,15 +100,17 @@ export default function LandingPage({ onNavigate }) {
         {/* --- HERO SECTION --- */}
         <div className="wbl-hero-section">
           <div className="wbl-hero-content">
-            
+          <br />
             <h1 className="wbl-hero-title">
-              Transform Customer Insights into
-              <span className="wbl-hero-highlight"> Actionable Opportunities</span>
+             Own the Opportunity
+             <br />
+             <br />
+               <span className="wbl-hero-highlight">WellBank</span>
             </h1>
             <p className="wbl-hero-description">
-              WellBank empowers your team with advanced customer segmentation, AI-augmentation and Machine Learning-driven service recommendations. Make data-driven decisions that drive 
-              revenue and enhance customer relationships.
+            Empower your team with an AI-augmented Command Center. Replace manual segmentation with real-time machine learning insights that deepen customer loyalty and maximize portfolio growth.
             </p>
+            <br />
             <div className="wbl-hero-cta">
               <button 
                 className="wbl-cta-primary"
@@ -124,6 +126,9 @@ export default function LandingPage({ onNavigate }) {
               <button className="wbl-cta-secondary">
                 Watch Demo
               </button>
+              <br />
+              <br />
+              
             </div>
           </div>
         </div>
@@ -133,6 +138,8 @@ export default function LandingPage({ onNavigate }) {
         {/* --- FEATURES SECTION --- */}
         <div className="wbl-features-section">
           <div className="wbl-section-header">
+          <br />
+          
             <div className="wbl-pill">Powered by AI Augmentation & Machine Learning</div>
            
           </div>

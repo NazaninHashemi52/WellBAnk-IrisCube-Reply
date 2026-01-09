@@ -25,12 +25,20 @@ import {
   MessageSquare,
   FileText,
   Zap,
+  CreditCard,
+  Wallet,
+  PiggyBank,
+  Briefcase,
+  Home,
+  Package,
+  MapPin,
+  Shield,
 } from "lucide-react";
 import EmployeeLayout from "./EmployeeLayout";
 import AIMessageComposer from "./AIMessageComposer";
 import ErrorBoundary from "./ErrorBoundary";
 import { getBatchRuns, getClusterRecommendations } from "../api/clusters";
-import { getRecommendationById } from "../api/offers";
+import { getRecommendationById, getAdvisorStrategy, getServicesByCategory } from "../api/offers";
 import "./LoginPage.css";
 import "./EmployeeDashboard.css";
 
@@ -352,6 +360,11 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
   const [customerDetail, setCustomerDetail] = useState(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [selectedCustomers, setSelectedCustomers] = useState(new Set()); // For bulk actions
+  const [advisorStrategy, setAdvisorStrategy] = useState(null);
+  const [isLoadingStrategy, setIsLoadingStrategy] = useState(false);
+  const [servicesByCategory, setServicesByCategory] = useState(null);
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState("Cards");
+  const [manuallySelectedService, setManuallySelectedService] = useState(null); // Service selected by advisor
 
   // Save pagination state to localStorage
   useEffect(() => {
@@ -420,6 +433,36 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
       setIsDetailLoading(true);
       setError(""); // Clear any previous errors
       
+      // Load services by category
+      try {
+        const servicesData = await getServicesByCategory();
+        console.log("Services by category loaded:", servicesData);
+        if (servicesData && servicesData.services_by_category) {
+          setServicesByCategory(servicesData);
+          // Set default category if not set
+          if (!selectedServiceCategory && Object.keys(servicesData.services_by_category).length > 0) {
+            setSelectedServiceCategory(Object.keys(servicesData.services_by_category)[0]);
+          }
+        } else {
+          console.warn("Services data structure invalid:", servicesData);
+        }
+      } catch (err) {
+        console.error("Failed to load services by category:", err);
+        setServicesByCategory(null);
+      }
+      
+      // Load AI Strategy Package (Intelligence + Reasoning layers)
+      setIsLoadingStrategy(true);
+      try {
+        const strategy = await getAdvisorStrategy(customerId);
+        setAdvisorStrategy(strategy);
+      } catch (err) {
+        console.warn("Failed to load advisor strategy:", err);
+        setAdvisorStrategy(null);
+      } finally {
+        setIsLoadingStrategy(false);
+      }
+      
       // Find the top recommendation for this customer
       const customerRecs = recommendations.filter(r => r.customer_id === customerId);
       if (customerRecs.length > 0) {
@@ -429,6 +472,26 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
         if (topRec.id) {
           try {
             const detail = await getRecommendationById(topRec.id);
+            
+            // Enhance explanation with AI reasoning if available and explanation is missing
+            if ((!detail.ai_explanation?.narrative || detail.ai_explanation.narrative === "No explanation available") 
+                && advisorStrategy && advisorStrategy.recommendations && advisorStrategy.recommendations.length > 0) {
+              const topAIRecommendation = advisorStrategy.recommendations[0];
+              if (topAIRecommendation.detailed_reasoning) {
+                detail.ai_explanation = {
+                  ...detail.ai_explanation,
+                  narrative: topAIRecommendation.detailed_reasoning,
+                  bullets: topAIRecommendation.key_benefits?.map(b => `• ${b}`) || detail.ai_explanation?.bullets,
+                };
+              } else if (topAIRecommendation.short_reasoning) {
+                detail.ai_explanation = {
+                  ...detail.ai_explanation,
+                  narrative: topAIRecommendation.short_reasoning,
+                  bullets: topAIRecommendation.key_benefits?.map(b => `• ${b}`) || detail.ai_explanation?.bullets,
+                };
+              }
+            }
+            
             setCustomerDetail(detail);
             return; // Success, exit early
           } catch (err) {
@@ -438,6 +501,46 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
         }
         
         // Fallback: Use basic data from recommendation
+        // Generate AI explanation from advisor strategy if available
+        let explanationNarrative = topRec.narrative;
+        let explanationBullets = [];
+        
+        if (!explanationNarrative && advisorStrategy && advisorStrategy.recommendations && advisorStrategy.recommendations.length > 0) {
+          // Use AI reasoning from top recommendation
+          const topAIRecommendation = advisorStrategy.recommendations[0];
+          if (topAIRecommendation.detailed_reasoning) {
+            explanationNarrative = topAIRecommendation.detailed_reasoning;
+          } else if (topAIRecommendation.short_reasoning) {
+            explanationNarrative = topAIRecommendation.short_reasoning;
+          }
+          
+          // Create bullets from key benefits
+          if (topAIRecommendation.key_benefits && topAIRecommendation.key_benefits.length > 0) {
+            explanationBullets = topAIRecommendation.key_benefits.map(benefit => `• ${benefit}`);
+          }
+        }
+        
+        // If still no explanation, create one from available data
+        if (!explanationNarrative || explanationNarrative === "No explanation available") {
+          const productName = advisorStrategy?.recommendations?.[0]?.product_name || topRec.product_code;
+          const fitnessScore = advisorStrategy?.recommendations?.[0]?.fitness_score;
+          const clusterInfo = advisorStrategy?.profile_summary?.cluster_interpretation || "";
+          
+          explanationNarrative = `Based on your financial profile and transaction patterns, ${productName} is recommended`;
+          if (fitnessScore) {
+            explanationNarrative += ` with a ${fitnessScore}% fitness score`;
+          }
+          explanationNarrative += `. `;
+          
+          if (clusterInfo) {
+            explanationNarrative += clusterInfo + " ";
+          }
+          
+          if (advisorStrategy?.recommendations?.[0]?.key_benefits?.length > 0) {
+            explanationNarrative += `This product offers: ${advisorStrategy.recommendations[0].key_benefits.slice(0, 2).join(', ')}.`;
+          }
+        }
+        
         setCustomerDetail({
           customer_snapshot: {
             customer_id: customerId,
@@ -451,7 +554,8 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
             id: topRec.id || null,
           },
           ai_explanation: {
-            narrative: topRec.narrative || "No explanation available",
+            narrative: explanationNarrative || "AI-powered recommendation based on customer profile analysis.",
+            bullets: explanationBullets.length > 0 ? explanationBullets : undefined,
           },
         });
       } else {
@@ -483,6 +587,19 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
       });
     } finally {
       setIsDetailLoading(false);
+    }
+  }
+  
+  async function reanalyzeCustomer(customerId) {
+    if (!customerId) return;
+    setIsLoadingStrategy(true);
+    try {
+      const strategy = await getAdvisorStrategy(customerId);
+      setAdvisorStrategy(strategy);
+    } catch (err) {
+      setError(`Failed to re-analyze: ${err.message}`);
+    } finally {
+      setIsLoadingStrategy(false);
     }
   }
 
@@ -676,7 +793,6 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
   }, [customerOpportunities]);
 
   function handleDismiss(customerId, recommendationId) {
-    // TODO: Call API to dismiss recommendation
     // Refresh recommendations
     if (selectedRunId) {
       loadRecommendations(selectedRunId);
@@ -684,7 +800,6 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
   }
 
   function handleSendEmail(customerId, recommendationId, message = null) {
-    // TODO: Call API to send email with message
     if (message) {
       // In production, this would call the backend API to send the email
       alert(`Message sent to customer ${customerId}:\n\n${message}`);
@@ -692,8 +807,7 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
   }
 
   function handleScheduleCall(customerId, recommendationId) {
-    // TODO: Open calendar/schedule interface
-    // Placeholder for future calendar integration
+    // Placeholder for calendar integration
   }
 
   // Mock data for radar chart (in production, this would come from API)
@@ -1105,8 +1219,7 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
                             <div style={{ display: "flex", gap: "8px" }}>
                               <button
                                 onClick={() => {
-                                  // TODO: Implement bulk email
-                                  // Bulk email functionality (TODO: implement API call)
+                                  // Bulk email functionality - to be implemented
                                 }}
                                 style={{
                                   padding: "8px 16px",
@@ -1233,66 +1346,212 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
                                   <ProbabilityGauge value={probability} size={60} />
                                 </div>
 
-                              {/* Customer Info */}
+                              {/* Customer Info - Structured Intelligence */}
                               <div style={{ marginBottom: "16px" }}>
+                                {/* Primary Identifier: Full Name */}
                                 <div style={{ 
-                                  fontSize: "18px", 
+                                  fontSize: "20px", 
                                   fontWeight: 700, 
                                   color: "white",
-                                  marginBottom: "4px",
+                                  marginBottom: "8px",
+                                  lineHeight: "1.2",
                                 }}>
                                   {customer.customer_name || customer.customer_id}
                                 </div>
+                                
+                                {/* Key Descriptor: Cluster/Persona */}
+                                <div style={{ 
+                                  fontSize: "13px", 
+                                  fontWeight: 600,
+                                  color: persona.color,
+                                  marginBottom: "6px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                }}>
+                                  <span style={{
+                                    padding: "3px 8px",
+                                    background: `${persona.color}20`,
+                                    border: `1px solid ${persona.color}40`,
+                                    borderRadius: "6px",
+                                  }}>
+                                    {persona.name}
+                                  </span>
+                                </div>
+                                
+                                {/* Economic Context */}
                                 <div style={{ 
                                   fontSize: "12px", 
-                                  color: "rgba(255, 255, 255, 0.6)",
-                                  marginBottom: "8px",
+                                  color: "rgba(255, 255, 255, 0.7)",
+                                  marginBottom: "4px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  flexWrap: "wrap",
                                 }}>
-                                  {customer.profession} • {formatCurrency(customer.annual_income)}
+                                  {customer.profession && (
+                                    <span style={{
+                                      padding: "2px 6px",
+                                      background: "rgba(79, 216, 235, 0.15)",
+                                      borderRadius: "4px",
+                                    }}>
+                                      {customer.profession}
+                                    </span>
+                                  )}
+                                  {customer.segment_hint && (
+                                    <span style={{
+                                      padding: "2px 6px",
+                                      background: "rgba(148, 163, 184, 0.15)",
+                                      borderRadius: "4px",
+                                    }}>
+                                      {customer.segment_hint}
+                                    </span>
+                                  )}
                                 </div>
+                                
+                                {/* Financial Context */}
+                                {customer.annual_income && (
                                 <div style={{ 
                                   fontSize: "11px", 
                                   color: "rgba(255, 255, 255, 0.5)",
+                                    marginTop: "4px",
                                 }}>
-                                  ID: {customer.customer_id}
+                                    Income: {formatCurrency(customer.annual_income)}
                                 </div>
+                                )}
                               </div>
 
-                              {/* Top Recommendation */}
+                              {/* Top Recommendation - The "Nudge" with Icon and AI Reasoning */}
+                              {(() => {
+                                // Get top AI recommendation from advisorStrategy if available (highest fitness_score)
+                                const topAIRecommendation = advisorStrategy?.recommendations?.length > 0
+                                  ? advisorStrategy.recommendations.sort((a, b) => (b.fitness_score || 0) - (a.fitness_score || 0))[0]
+                                  : null;
+                                const displayProduct = topAIRecommendation || topRec;
+                                const productIcon = topAIRecommendation?.icon || "wallet";
+                                
+                                // Map icon name to component
+                                const iconMap = {
+                                  'credit-card': CreditCard,
+                                  'wallet': Wallet,
+                                  'piggy-bank': PiggyBank,
+                                  'trending-up': TrendingUp,
+                                  'shield': Shield,
+                                  'home': Home,
+                                  'briefcase': Briefcase,
+                                  'package': Package,
+                                  'map-pin': MapPin,
+                                  'dollar-sign': DollarSign,
+                                };
+                                const IconComponent = iconMap[productIcon?.toLowerCase()] || Wallet;
+                                
+                                return (
                               <div style={{
                                 background: "rgba(255, 255, 255, 0.05)",
                                 borderRadius: "12px",
                                 padding: "12px",
                                 marginBottom: "16px",
+                                    border: "1px solid rgba(79, 216, 235, 0.2)",
                               }}>
                                 <div style={{ 
-                                  fontSize: "14px", 
+                                      fontSize: "11px",
                                   fontWeight: 600, 
-                                  color: "white",
+                                      color: "rgba(79, 216, 235, 0.9)",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.5px",
+                                      marginBottom: "6px",
+                                    }}>
+                                      Suitable Service
+                                    </div>
+                                    <div style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "10px",
                                   marginBottom: "8px",
                                 }}>
-                                  Recommended: {topRec.product_code}
+                                      <div style={{
+                                        width: "36px",
+                                        height: "36px",
+                                        borderRadius: "8px",
+                                        background: "rgba(79, 216, 235, 0.15)",
+                                        border: "1px solid rgba(79, 216, 235, 0.3)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                      }}>
+                                        <IconComponent 
+                                          size={20} 
+                                          color="#4fd8eb"
+                                          style={{ filter: "drop-shadow(0 0 4px rgba(79, 216, 235, 0.5))" }}
+                                        />
+                                      </div>
+                                      <div style={{ flex: 1 }}>
+                                        <div style={{ 
+                                          fontSize: "15px", 
+                                          fontWeight: 700, 
+                                          color: "white",
+                                          marginBottom: "2px",
+                                        }}>
+                                          {displayProduct.product_name || displayProduct.product_code}
+                                        </div>
+                                        {topAIRecommendation?.fitness_score && (
+                                          <div style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "4px",
+                                            padding: "2px 6px",
+                                            background: topAIRecommendation.fitness_score >= 80 
+                                              ? "rgba(16, 185, 129, 0.2)" 
+                                              : topAIRecommendation.fitness_score >= 70 
+                                              ? "rgba(59, 130, 246, 0.2)" 
+                                              : "rgba(245, 158, 11, 0.2)",
+                                            border: `1px solid ${topAIRecommendation.fitness_score >= 80 
+                                              ? "rgba(16, 185, 129, 0.4)" 
+                                              : topAIRecommendation.fitness_score >= 70 
+                                              ? "rgba(59, 130, 246, 0.4)" 
+                                              : "rgba(245, 158, 11, 0.4)"}`,
+                                            borderRadius: "4px",
+                                            fontSize: "10px",
+                                            fontWeight: 600,
+                                            color: topAIRecommendation.fitness_score >= 80 
+                                              ? "#10b981" 
+                                              : topAIRecommendation.fitness_score >= 70 
+                                              ? "#3b82f6" 
+                                              : "#f59e0b",
+                                          }}>
+                                            {topAIRecommendation.fitness_score}% Match
+                                          </div>
+                                        )}
+                                      </div>
                                 </div>
                                 <div style={{ 
                                   fontSize: "12px", 
                                   color: "rgba(255, 255, 255, 0.7)",
                                   lineHeight: "1.5",
                                   marginBottom: "8px",
+                                      fontStyle: "italic",
                                 }}>
-                                  {topRec.narrative || "AI-powered recommendation based on customer profile"}
+                                      {topAIRecommendation?.short_reasoning || topRec.narrative || "AI-powered recommendation based on customer profile"}
                                 </div>
                                 <div style={{ 
                                   display: "flex", 
                                   justifyContent: "space-between",
-                                  fontSize: "13px",
+                                      alignItems: "center",
+                                      fontSize: "12px",
+                                      paddingTop: "8px",
+                                      borderTop: "1px solid rgba(255, 255, 255, 0.1)",
                                 }}>
                                   <div style={{ color: "rgba(255, 255, 255, 0.6)" }}>
-                                    Revenue: <span style={{ color: "#10b981", fontWeight: 600 }}>
-                                      {formatCurrency(topRec.expected_revenue)}
+                                        Expected Revenue:
+                                      </div>
+                                      <span style={{ color: "#10b981", fontWeight: 700, fontSize: "13px" }}>
+                                        {formatCurrency(displayProduct.expected_revenue || topRec.expected_revenue)}
                                     </span>
                                   </div>
                                 </div>
-                              </div>
+                                );
+                              })()}
 
                               {/* Quick Actions */}
                               <div style={{
@@ -1668,6 +1927,129 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
                           )}
                         </div>
 
+                        {/* AI Strategic Summary - Intelligence Layer */}
+                        {advisorStrategy && advisorStrategy.profile_summary && (
+                          <div style={{
+                            background: "rgba(59, 130, 246, 0.1)",
+                            backdropFilter: "blur(12px)",
+                            border: "1px solid rgba(59, 130, 246, 0.3)",
+                            borderRadius: "12px",
+                            padding: "16px",
+                            marginBottom: "20px",
+                          }}>
+                            <div style={{ 
+                              display: "flex", 
+                              justifyContent: "space-between", 
+                              alignItems: "center",
+                              marginBottom: "12px",
+                            }}>
+                              <div style={{ 
+                                fontSize: "14px", 
+                                fontWeight: 700, 
+                                color: "#4fd8eb",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                              }}>
+                                <Sparkles size={16} />
+                                AI Strategic Summary
+                              </div>
+                              <button
+                                onClick={() => reanalyzeCustomer(selectedCustomer)}
+                                disabled={isLoadingStrategy}
+                                style={{
+                                  padding: "4px 8px",
+                                  background: "rgba(59, 130, 246, 0.2)",
+                                  border: "1px solid rgba(59, 130, 246, 0.4)",
+                                  borderRadius: "6px",
+                                  color: "#93c5fd",
+                                  fontSize: "11px",
+                                  fontWeight: 600,
+                                  cursor: isLoadingStrategy ? "not-allowed" : "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                <RefreshCw size={12} style={{ animation: isLoadingStrategy ? "spin 1s linear infinite" : "none" }} />
+                                Re-analyze
+                              </button>
+                            </div>
+                            
+                            {isLoadingStrategy ? (
+                              <div style={{ textAlign: "center", padding: "20px", color: "rgba(255, 255, 255, 0.7)" }}>
+                                <RefreshCw size={20} style={{ animation: "spin 1s linear infinite" }} />
+                                <p style={{ marginTop: "8px", fontSize: "12px" }}>Analyzing customer profile...</p>
+                              </div>
+                            ) : (
+                              <>
+                                <div style={{ 
+                                  fontSize: "13px", 
+                                  color: "#E2E8F0",
+                                  lineHeight: "1.6",
+                                  marginBottom: "12px",
+                                }}>
+                                  {advisorStrategy.profile_summary.summary || "No summary available"}
+                                </div>
+                                
+                                {advisorStrategy.profile_summary.cluster_interpretation && (
+                                  <div style={{
+                                    marginTop: "12px",
+                                    padding: "12px",
+                                    background: "rgba(0, 0, 0, 0.2)",
+                                    borderRadius: "8px",
+                                    borderLeft: "3px solid #4fd8eb",
+                                  }}>
+                                    <div style={{ 
+                                      fontSize: "12px", 
+                                      fontWeight: 600, 
+                                      color: "#4fd8eb",
+                                      marginBottom: "6px",
+                                    }}>
+                                      Cluster Interpretation
+                                    </div>
+                                    <div style={{ 
+                                      fontSize: "12px", 
+                                      color: "rgba(255, 255, 255, 0.8)",
+                                      lineHeight: "1.5",
+                                    }}>
+                                      {advisorStrategy.profile_summary.cluster_interpretation}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Financial Metrics Quick View */}
+                                {advisorStrategy.profile_summary.customer_profile?.financial_metrics && (
+                                  <div style={{
+                                    marginTop: "12px",
+                                    display: "grid",
+                                    gridTemplateColumns: "repeat(2, 1fr)",
+                                    gap: "8px",
+                                    fontSize: "11px",
+                                  }}>
+                                    {advisorStrategy.profile_summary.customer_profile.financial_metrics.average_transaction_amount && (
+                                      <div>
+                                        <div style={{ color: "rgba(255, 255, 255, 0.6)" }}>Avg Transaction</div>
+                                        <div style={{ color: "#4fd8eb", fontWeight: 600 }}>
+                                          €{advisorStrategy.profile_summary.customer_profile.financial_metrics.average_transaction_amount.toFixed(2)}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {advisorStrategy.profile_summary.customer_profile.financial_metrics.transaction_frequency && (
+                                      <div>
+                                        <div style={{ color: "rgba(255, 255, 255, 0.6)" }}>Tx Frequency</div>
+                                        <div style={{ color: "#4fd8eb", fontWeight: 600 }}>
+                                          {advisorStrategy.profile_summary.customer_profile.financial_metrics.transaction_frequency}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
+
                         {/* Product Fit Radar */}
                         {selectedCustomer && (() => {
                           const customer = customerOpportunities.find(c => c.customer_id === selectedCustomer);
@@ -1715,43 +2097,538 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
                           return null;
                         })()}
 
-                        {/* Recommendation Details */}
-                        {customerDetail.recommended_service && (
+                        {/* Strategic Advisor Assistant - Grouped Service Selector */}
+                        {servicesByCategory && servicesByCategory.services_by_category && Object.keys(servicesByCategory.services_by_category).length > 0 ? (
                           <div style={{
-                            background: "rgba(255, 255, 255, 0.05)",
+                            background: "rgba(59, 130, 246, 0.1)",
+                            backdropFilter: "blur(12px)",
+                            border: "1px solid rgba(59, 130, 246, 0.3)",
                             borderRadius: "12px",
                             padding: "16px",
                             marginBottom: "20px",
                           }}>
                             <div style={{ 
                               fontSize: "14px", 
-                              fontWeight: 600, 
-                              color: "white",
-                              marginBottom: "12px",
-                            }}>
-                              Recommendation
-                            </div>
-                            <div style={{ 
-                              fontSize: "16px", 
                               fontWeight: 700, 
                               color: "#4fd8eb",
+                              marginBottom: "16px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}>
+                              <Target size={16} />
+                              Strategic Advisor Assistant - Select Service
+                            </div>
+                            
+                            {/* Category Tabs */}
+                            <div style={{
+                              display: "flex",
+                              gap: "8px",
+                              marginBottom: "16px",
+                              flexWrap: "wrap",
+                              borderBottom: "2px solid rgba(79, 216, 235, 0.2)",
+                              paddingBottom: "12px",
+                            }}>
+                              {Object.keys(servicesByCategory.services_by_category).map((category) => (
+                                <button
+                                  key={category}
+                                  onClick={() => setSelectedServiceCategory(category)}
+                                  style={{
+                                    padding: "8px 16px",
+                                    background: selectedServiceCategory === category 
+                                      ? "rgba(79, 216, 235, 0.3)" 
+                                      : "rgba(255, 255, 255, 0.05)",
+                                    border: selectedServiceCategory === category
+                                      ? "2px solid rgba(79, 216, 235, 0.6)"
+                                      : "2px solid transparent",
+                                    borderRadius: "8px",
+                                    fontSize: "12px",
+                                    fontWeight: selectedServiceCategory === category ? 700 : 500,
+                                    color: selectedServiceCategory === category ? "#4fd8eb" : "rgba(255, 255, 255, 0.7)",
+                                    cursor: "pointer",
+                                    transition: "all 0.2s",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                  }}
+                                >
+                                  {category}
+                                  <span style={{
+                                    fontSize: "10px",
+                                    background: selectedServiceCategory === category 
+                                      ? "rgba(79, 216, 235, 0.3)" 
+                                      : "rgba(255, 255, 255, 0.1)",
+                                    padding: "2px 6px",
+                                    borderRadius: "10px",
+                                  }}>
+                                    {servicesByCategory.services_by_category[category]?.length || 0}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                            
+                            {/* Services Grid for Selected Category */}
+                            {servicesByCategory.services_by_category[selectedServiceCategory] && (
+                              <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                                gap: "12px",
+                                maxHeight: "400px",
+                                overflowY: "auto",
+                                padding: "8px",
+                              }}>
+                                {servicesByCategory.services_by_category[selectedServiceCategory].map((service) => {
+                                  const isSelected = manuallySelectedService?.product_code === service.product_code;
+                                  const isRecommended = advisorStrategy?.recommendations?.some(
+                                    rec => rec.product_code === service.product_code
+                                  );
+                                  
+                                  return (
+                                    <div
+                                      key={service.product_code}
+                                      onClick={() => {
+                                        setManuallySelectedService(service);
+                                      }}
+                                      style={{
+                                        background: isSelected 
+                                          ? "rgba(79, 216, 235, 0.2)" 
+                                          : "rgba(0, 0, 0, 0.2)",
+                                        border: isSelected
+                                          ? "2px solid rgba(79, 216, 235, 0.6)"
+                                          : isRecommended
+                                          ? "1px solid rgba(16, 185, 129, 0.4)"
+                                          : "1px solid rgba(79, 216, 235, 0.2)",
+                                        borderRadius: "8px",
+                                        padding: "12px",
+                                        cursor: "pointer",
+                                        transition: "all 0.2s",
+                                        position: "relative",
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        if (!isSelected) {
+                                          e.currentTarget.style.borderColor = "rgba(79, 216, 235, 0.5)";
+                                          e.currentTarget.style.background = "rgba(0, 0, 0, 0.3)";
+                                        }
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        if (!isSelected) {
+                                          e.currentTarget.style.borderColor = isRecommended
+                                            ? "rgba(16, 185, 129, 0.4)"
+                                            : "rgba(79, 216, 235, 0.2)";
+                                          e.currentTarget.style.background = "rgba(0, 0, 0, 0.2)";
+                                        }
+                                      }}
+                                    >
+                                      {isRecommended && (
+                                        <div style={{
+                                          position: "absolute",
+                                          top: "8px",
+                                          right: "8px",
+                                          background: "rgba(16, 185, 129, 0.2)",
+                                          border: "1px solid rgba(16, 185, 129, 0.4)",
+                                          borderRadius: "4px",
+                                          padding: "2px 6px",
+                                          fontSize: "9px",
+                                          fontWeight: 600,
+                                          color: "#10b981",
+                                        }}>
+                                          AI Recommended
+                                        </div>
+                                      )}
+                                      
+                                      {/* Service Icon */}
+                                      {(() => {
+                                        const iconMap = {
+                                          'credit-card': CreditCard,
+                                          'wallet': Wallet,
+                                          'piggy-bank': PiggyBank,
+                                          'trending-up': TrendingUp,
+                                          'shield': Shield,
+                                          'home': Home,
+                                          'briefcase': Briefcase,
+                                          'package': Package,
+                                          'map-pin': MapPin,
+                                          'dollar-sign': DollarSign,
+                                        };
+                                        const IconComponent = iconMap[service.icon?.toLowerCase()] || Wallet;
+                                        return (
+                                          <div style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "8px",
+                                            marginBottom: "8px",
+                                          }}>
+                                            <div style={{
+                                              width: "32px",
+                                              height: "32px",
+                                              borderRadius: "8px",
+                                              background: isSelected 
+                                                ? "rgba(79, 216, 235, 0.2)" 
+                                                : "rgba(79, 216, 235, 0.1)",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              flexShrink: 0,
+                                            }}>
+                                              <IconComponent 
+                                                size={18} 
+                                                color={isSelected ? "#4fd8eb" : "rgba(79, 216, 235, 0.8)"}
+                                              />
+                                            </div>
+                                            <div style={{ 
+                                              fontSize: "13px", 
+                                              fontWeight: 600, 
+                                              color: "#E2E8F0",
+                                              flex: 1,
+                                              paddingRight: isRecommended ? "80px" : "0",
+                                            }}>
+                                              {service.name}
+                                            </div>
+                                          </div>
+                                        );
+                                      })()}
+                                      
+                                      <div style={{ 
+                                        fontSize: "10px", 
+                                        color: "rgba(255, 255, 255, 0.5)",
+                                        marginBottom: "8px",
+                                      }}>
+                                        {service.description || service.type}
+                                      </div>
+                                      
+                                      {service.key_benefits && service.key_benefits.length > 0 && (
+                                        <div style={{ marginTop: "8px" }}>
+                                          <ul style={{ 
+                                            margin: 0, 
+                                            paddingLeft: "16px", 
+                                            fontSize: "10px", 
+                                            color: "rgba(255, 255, 255, 0.6)", 
+                                            lineHeight: "1.4" 
+                                          }}>
+                                            {service.key_benefits.slice(0, 2).map((benefit, idx) => (
+                                              <li key={idx}>{benefit}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            
+                            {/* Category Description */}
+                            {servicesByCategory.category_info?.[selectedServiceCategory] && (
+                              <div style={{
+                                marginTop: "12px",
+                                padding: "10px",
+                                background: "rgba(0, 0, 0, 0.2)",
+                                borderRadius: "6px",
+                                fontSize: "11px",
+                                color: "rgba(255, 255, 255, 0.6)",
+                                fontStyle: "italic",
+                              }}>
+                                {servicesByCategory.category_info[selectedServiceCategory].description}
+                              </div>
+                            )}
+                          </div>
+                        ) : servicesByCategory && servicesByCategory.error ? (
+                          <div style={{
+                            background: "rgba(239, 68, 68, 0.1)",
+                            backdropFilter: "blur(12px)",
+                            border: "1px solid rgba(239, 68, 68, 0.3)",
+                            borderRadius: "12px",
+                            padding: "16px",
+                            marginBottom: "20px",
+                          }}>
+                            <div style={{ 
+                              fontSize: "14px", 
+                              fontWeight: 700, 
+                              color: "#ef4444",
                               marginBottom: "8px",
                             }}>
-                              {customerDetail.recommended_service.product_code}
+                              ⚠️ Services Not Available
                             </div>
                             <div style={{ 
                               fontSize: "12px", 
-                              color: "rgba(255, 255, 255, 0.6)",
-                              marginBottom: "12px",
+                              color: "rgba(255, 255, 255, 0.7)",
                             }}>
-                              Expected Revenue: {formatCurrency(customerDetail.recommended_service.expected_revenue)}
+                              {servicesByCategory.error || "Failed to load services. Please check backend logs."}
                             </div>
-                            <ProbabilityGauge 
-                              value={customerDetail.recommended_service.acceptance_probability || 0} 
-                              size={100}
-                            />
                           </div>
-                        )}
+                        ) : null}
+
+                        {/* Top 3 Recommended Products - Dynamic AI Insights */}
+                        {(() => {
+                          // Check if we have AI recommendations
+                          if (advisorStrategy && advisorStrategy.recommendations && advisorStrategy.recommendations.length > 0) {
+                            return (
+                              <div style={{
+                                background: "rgba(59, 130, 246, 0.1)",
+                                backdropFilter: "blur(12px)",
+                                border: "1px solid rgba(59, 130, 246, 0.3)",
+                                borderRadius: "12px",
+                                padding: "16px",
+                                marginBottom: "20px",
+                              }}>
+                                <div style={{ 
+                                  fontSize: "14px", 
+                                  fontWeight: 700, 
+                                  color: "#4fd8eb",
+                                  marginBottom: "16px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                }}>
+                                  <Target size={16} />
+                                  Top {advisorStrategy.recommendations.length} Recommended Products
+                                </div>
+                                
+                                {advisorStrategy.recommendations
+                                  .sort((a, b) => (b.fitness_score || 0) - (a.fitness_score || 0)) // Sort by fitness_score descending
+                                  .map((rec, idx) => {
+                              // Map icon name to component
+                              const iconMap = {
+                                'credit-card': CreditCard,
+                                'wallet': Wallet,
+                                'piggy-bank': PiggyBank,
+                                'trending-up': TrendingUp,
+                                'shield': Shield,
+                                'home': Home,
+                                'briefcase': Briefcase,
+                                'package': Package,
+                                'map-pin': MapPin,
+                                'dollar-sign': DollarSign,
+                              };
+                              const IconComponent = iconMap[rec.icon?.toLowerCase()] || Wallet;
+                              
+                              return (
+                                <div
+                                  key={rec.product_code || idx}
+                                  onClick={() => {
+                                    // Set this as the manually selected service
+                                    setManuallySelectedService(rec);
+                                  }}
+                                  style={{
+                                    background: manuallySelectedService?.product_code === rec.product_code 
+                                      ? "rgba(79, 216, 235, 0.2)" 
+                                      : "rgba(0, 0, 0, 0.2)",
+                                    borderRadius: "8px",
+                                    padding: "12px",
+                                    marginBottom: idx < advisorStrategy.recommendations.length - 1 ? "12px" : "0",
+                                    border: `1px solid ${manuallySelectedService?.product_code === rec.product_code 
+                                      ? "rgba(79, 216, 235, 0.5)" 
+                                      : "rgba(79, 216, 235, 0.2)"}`,
+                                    cursor: "pointer",
+                                    transition: "all 0.2s",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (manuallySelectedService?.product_code !== rec.product_code) {
+                                      e.currentTarget.style.borderColor = "rgba(79, 216, 235, 0.5)";
+                                      e.currentTarget.style.background = "rgba(0, 0, 0, 0.3)";
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (manuallySelectedService?.product_code !== rec.product_code) {
+                                      e.currentTarget.style.borderColor = "rgba(79, 216, 235, 0.2)";
+                                      e.currentTarget.style.background = "rgba(0, 0, 0, 0.2)";
+                                    }
+                                  }}
+                                >
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "8px" }}>
+                                    <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "10px" }}>
+                                      {/* Product Icon */}
+                                      <div style={{
+                                        width: "32px",
+                                        height: "32px",
+                                        borderRadius: "8px",
+                                        background: manuallySelectedService?.product_code === rec.product_code 
+                                          ? "rgba(79, 216, 235, 0.2)" 
+                                          : "rgba(79, 216, 235, 0.1)",
+                                        border: `1px solid ${manuallySelectedService?.product_code === rec.product_code 
+                                          ? "rgba(79, 216, 235, 0.4)" 
+                                          : "rgba(79, 216, 235, 0.2)"}`,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                      }}>
+                                        <IconComponent 
+                                          size={18} 
+                                          color={manuallySelectedService?.product_code === rec.product_code ? "#4fd8eb" : "rgba(79, 216, 235, 0.8)"}
+                                        />
+                                      </div>
+                                      <div style={{ flex: 1 }}>
+                                        <div style={{ 
+                                          fontSize: "14px", 
+                                          fontWeight: 600, 
+                                          color: "#E2E8F0",
+                                          marginBottom: "4px",
+                                        }}>
+                                          #{rec.rank || idx + 1}. {rec.product_name || rec.product_code}
+                                        </div>
+                                        <div style={{ 
+                                          fontSize: "11px", 
+                                          color: "rgba(255, 255, 255, 0.5)",
+                                        }}>
+                                          {rec.category || "Unknown Category"}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div style={{
+                                      padding: "4px 8px",
+                                      background: rec.fitness_score >= 80 ? "rgba(16, 185, 129, 0.2)" : rec.fitness_score >= 70 ? "rgba(59, 130, 246, 0.2)" : "rgba(245, 158, 11, 0.2)",
+                                      border: `1px solid ${rec.fitness_score >= 80 ? "rgba(16, 185, 129, 0.4)" : rec.fitness_score >= 70 ? "rgba(59, 130, 246, 0.4)" : "rgba(245, 158, 11, 0.4)"}`,
+                                      borderRadius: "6px",
+                                      fontSize: "11px",
+                                      fontWeight: 700,
+                                      color: rec.fitness_score >= 80 ? "#10b981" : rec.fitness_score >= 70 ? "#3b82f6" : "#f59e0b",
+                                    }}>
+                                      {rec.fitness_score || 0}% Match
+                                    </div>
+                                  </div>
+                                
+                                {/* Key Benefits */}
+                                {rec.key_benefits && rec.key_benefits.length > 0 && (
+                                  <div style={{ marginTop: "8px" }}>
+                                    <div style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255, 255, 255, 0.7)", marginBottom: "4px" }}>
+                                      Key Benefits:
+                                    </div>
+                                    <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "11px", color: "rgba(255, 255, 255, 0.6)", lineHeight: "1.5" }}>
+                                      {rec.key_benefits.slice(0, 3).map((benefit, bidx) => (
+                                        <li key={bidx}>{benefit}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                
+                                {/* Short Reasoning - Display why this service was chosen */}
+                                {rec.short_reasoning && (
+                                  <div style={{ 
+                                    marginTop: "8px",
+                                    padding: "8px",
+                                    background: "rgba(79, 216, 235, 0.1)",
+                                    borderRadius: "6px",
+                                    borderLeft: "3px solid #4fd8eb",
+                                  }}>
+                                    <div style={{ 
+                                      fontSize: "10px",
+                                      fontWeight: 600,
+                                      color: "#4fd8eb",
+                                      marginBottom: "4px",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.5px",
+                                    }}>
+                                      Why This Fits
+                                    </div>
+                                    <div style={{ 
+                                      fontSize: "11px",
+                                      color: "rgba(255, 255, 255, 0.8)",
+                                      lineHeight: "1.5",
+                                      fontStyle: "italic",
+                                    }}>
+                                      {rec.short_reasoning}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Detailed Reasoning (if short_reasoning not available) */}
+                                {!rec.short_reasoning && rec.detailed_reasoning && (
+                                  <div style={{ 
+                                    marginTop: "8px",
+                                    padding: "8px",
+                                    background: "rgba(79, 216, 235, 0.1)",
+                                    borderRadius: "6px",
+                                    borderLeft: "3px solid #4fd8eb",
+                                  }}>
+                                    <div style={{ 
+                                      fontSize: "10px",
+                                      fontWeight: 600,
+                                      color: "#4fd8eb",
+                                      marginBottom: "4px",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.5px",
+                                    }}>
+                                      Why This Fits
+                                    </div>
+                                    <div style={{ 
+                                      fontSize: "11px",
+                                      color: "rgba(255, 255, 255, 0.8)",
+                                      lineHeight: "1.5",
+                                      fontStyle: "italic",
+                                    }}>
+                                      {rec.detailed_reasoning.substring(0, 150)}...
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Metrics */}
+                                <div style={{ 
+                                  display: "flex", 
+                                  gap: "12px", 
+                                  marginTop: "8px",
+                                  fontSize: "10px",
+                                  color: "rgba(255, 255, 255, 0.5)",
+                                }}>
+                                  {rec.acceptance_probability && (
+                                    <div>
+                                      <span style={{ color: "rgba(255, 255, 255, 0.7)" }}>Acceptance:</span> {formatPercent(rec.acceptance_probability)}
+                                    </div>
+                                  )}
+                                  {rec.expected_revenue && (
+                                    <div>
+                                      <span style={{ color: "rgba(255, 255, 255, 0.7)" }}>Revenue:</span> {formatCurrency(rec.expected_revenue)}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                            })}
+                              </div>
+                            );
+                          }
+                          // Fallback: Single Recommendation Display
+                          if (customerDetail?.recommended_service) {
+                            return (
+                              <div style={{
+                                background: "rgba(255, 255, 255, 0.05)",
+                                borderRadius: "12px",
+                                padding: "16px",
+                                marginBottom: "20px",
+                              }}>
+                                <div style={{ 
+                                  fontSize: "14px", 
+                                  fontWeight: 600, 
+                                  color: "white",
+                                  marginBottom: "12px",
+                                }}>
+                                  Recommendation
+                                </div>
+                                <div style={{ 
+                                  fontSize: "16px", 
+                                  fontWeight: 700, 
+                                  color: "#4fd8eb",
+                                  marginBottom: "8px",
+                                }}>
+                                  {customerDetail.recommended_service.product_code}
+                                </div>
+                                <div style={{ 
+                                  fontSize: "12px", 
+                                  color: "rgba(255, 255, 255, 0.6)",
+                                  marginBottom: "12px",
+                                }}>
+                                  Expected Revenue: {formatCurrency(customerDetail.recommended_service.expected_revenue)}
+                                </div>
+                                <ProbabilityGauge 
+                                  value={customerDetail.recommended_service.acceptance_probability || 0} 
+                                  size={100}
+                                />
+                              </div>
+                            );
+                          }
+                          // No recommendations available
+                          return null;
+                        })()}
 
                         {/* AI Explanation */}
                         {customerDetail.ai_explanation && (
@@ -1827,8 +2704,68 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
                           return null;
                         })()}
 
-                        {/* Scripts / What to Say */}
-                        {customerDetail.draft_message && (
+                        {/* AI Message Composer - Editable Message Draft */}
+                        {advisorStrategy && advisorStrategy.recommendations && advisorStrategy.recommendations.length > 0 && (
+                          <div style={{
+                            background: "rgba(139, 92, 246, 0.1)",
+                            backdropFilter: "blur(12px)",
+                            border: "1px solid rgba(139, 92, 246, 0.3)",
+                            borderRadius: "12px",
+                            padding: "16px",
+                            marginBottom: "20px",
+                          }}>
+                            <div style={{ 
+                              fontSize: "14px", 
+                              fontWeight: 700, 
+                              color: "#a78bfa",
+                              marginBottom: "12px",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                            }}>
+                              <MessageSquare size={16} />
+                              AI-Generated Message Draft
+                            </div>
+                            <AIMessageComposer
+                              customerName={customerDetail.customer_snapshot?.customer_name || selectedCustomer}
+                              customerId={selectedCustomer}
+                              productName={
+                                manuallySelectedService?.name || 
+                                advisorStrategy.recommendations[0]?.product_name || 
+                                customerDetail.recommended_service?.product_code
+                              }
+                              productCode={
+                                manuallySelectedService?.product_code || 
+                                advisorStrategy.recommendations[0]?.product_code || 
+                                customerDetail.recommended_service?.product_code
+                              }
+                              clusterLabel={customerDetail.customer_snapshot?.cluster_label || ""}
+                              clusterId={advisorStrategy.profile_summary?.customer_profile?.cluster_id}
+                              aiReasoning={
+                                manuallySelectedService ? {
+                                  short_reasoning: manuallySelectedService.description || "Service selected by advisor",
+                                  detailed_reasoning: manuallySelectedService.description || "",
+                                  key_benefits: manuallySelectedService.key_benefits || [],
+                                } : (advisorStrategy.recommendations[0] ? {
+                                  short_reasoning: advisorStrategy.recommendations[0].short_reasoning,
+                                  detailed_reasoning: advisorStrategy.recommendations[0].detailed_reasoning,
+                                  key_benefits: advisorStrategy.recommendations[0].key_benefits,
+                                } : null)
+                              }
+                              onSend={(message) => {
+                                console.log("Message ready to send:", message);
+                                // Handle send action
+                              }}
+                              onSave={(message) => {
+                                console.log("Message saved:", message);
+                                // Handle save action
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Scripts / What to Say - Fallback */}
+                        {customerDetail.draft_message && !advisorStrategy && (
                           <div style={{
                             background: "rgba(255, 255, 255, 0.05)",
                             borderRadius: "12px",
@@ -1889,8 +2826,7 @@ export default function ServiceSuggestionsPage({ onNavigate, onBack }) {
                               }
                             }}
                             onSave={(draft, examples, saveAsDefault) => {
-                              // TODO: Save draft and examples to backend
-                              // Saving draft (TODO: implement backend API)
+                              // Save draft and examples to backend - to be implemented
                               if (saveAsDefault) {
                                 // Save to user preferences
                                 localStorage.setItem('wellbank_ai_examples', JSON.stringify(examples));

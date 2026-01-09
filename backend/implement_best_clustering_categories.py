@@ -110,47 +110,69 @@ def load_and_prepare_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
             # Convert tx_date to datetime
             transactions_df['tx_date'] = pd.to_datetime(transactions_df['tx_date'], errors='coerce')
             
-            # Group by customer and category
-            tx_by_category = transactions_df.groupby(['customer_id', 'tx_category']).agg({
-                'amount': ['sum', 'count', 'mean']
-            }).reset_index()
-            tx_by_category.columns = ['customer_id', 'tx_category', 'category_total', 'category_count', 'category_avg']
+            # Filter out NULL/empty categories for category-based features
+            transactions_with_category = transactions_df[
+                transactions_df['tx_category'].notna() & 
+                (transactions_df['tx_category'] != '') & 
+                (transactions_df['tx_category'].astype(str).str.strip() != '')
+            ].copy()
             
-            # Pivot to get category columns (categoria_mode pattern)
-            category_totals = tx_by_category.pivot_table(
-                index='customer_id',
-                columns='tx_category',
-                values='category_total',
-                fill_value=0
-            )
-            category_totals.columns = [f'categoria_mode_{col}' for col in category_totals.columns]
-            
-            # Category counts
-            category_counts = tx_by_category.pivot_table(
-                index='customer_id',
-                columns='tx_category',
-                values='category_count',
-                fill_value=0
-            )
-            category_counts.columns = [f'categoria_count_{col}' for col in category_counts.columns]
-            
-            # Overall transaction statistics
+            # Overall transaction statistics (always create these, even without categories)
             tx_stats = transactions_df.groupby('customer_id').agg({
                 'amount': ['sum', 'mean', 'std', 'count']
             }).reset_index()
             tx_stats.columns = ['customer_id', 'total_spent', 'avg_transaction', 'std_transaction', 'transaction_count']
             tx_stats = tx_stats.fillna(0)
             
-            # Merge transaction features
-            transaction_features = tx_stats.merge(
-                category_totals.reset_index(),
-                on='customer_id',
-                how='left'
-            ).merge(
-                category_counts.reset_index(),
-                on='customer_id',
-                how='left'
-            )
+            # Category-based features (only if we have valid categories)
+            if len(transactions_with_category) > 0:
+                # Group by customer and category
+                tx_by_category = transactions_with_category.groupby(['customer_id', 'tx_category']).agg({
+                    'amount': ['sum', 'count', 'mean']
+                }).reset_index()
+                tx_by_category.columns = ['customer_id', 'tx_category', 'category_total', 'category_count', 'category_avg']
+                
+                # Pivot to get category columns (categoria_mode pattern)
+                if len(tx_by_category) > 0:
+                    category_totals = tx_by_category.pivot_table(
+                        index='customer_id',
+                        columns='tx_category',
+                        values='category_total',
+                        fill_value=0
+                    )
+                    if len(category_totals.columns) > 0:
+                        category_totals.columns = [f'categoria_mode_{col}' for col in category_totals.columns]
+                    else:
+                        category_totals = pd.DataFrame(index=tx_stats['customer_id'])
+                    
+                    # Category counts
+                    category_counts = tx_by_category.pivot_table(
+                        index='customer_id',
+                        columns='tx_category',
+                        values='category_count',
+                        fill_value=0
+                    )
+                    if len(category_counts.columns) > 0:
+                        category_counts.columns = [f'categoria_count_{col}' for col in category_counts.columns]
+                    else:
+                        category_counts = pd.DataFrame(index=tx_stats['customer_id'])
+                    
+                    # Merge transaction features
+                    transaction_features = tx_stats.merge(
+                        category_totals.reset_index(),
+                        on='customer_id',
+                        how='left'
+                    ).merge(
+                        category_counts.reset_index(),
+                        on='customer_id',
+                        how='left'
+                    )
+                else:
+                    transaction_features = tx_stats.copy()
+            else:
+                # No valid categories, but we still have transaction stats
+                print("Warning: No valid transaction categories found. Using transaction amount features only.")
+                transaction_features = tx_stats.copy()
         else:
             # Create empty dataframe with customer_id
             transaction_features = pd.DataFrame({'customer_id': customers_df['customer_id']})
@@ -158,33 +180,52 @@ def load_and_prepare_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
         # 2. Product Category Features
         product_features = []
         if len(holdings_df) > 0:
-            # Group by customer and product category
-            holdings_by_category = holdings_df.groupby(['customer_id', 'category']).agg({
-                'balance': ['sum', 'count']
-            }).reset_index()
-            holdings_by_category.columns = ['customer_id', 'category', 'category_balance', 'category_count']
+            # Filter out NULL/empty categories
+            holdings_with_category = holdings_df[
+                holdings_df['category'].notna() & 
+                (holdings_df['category'] != '') & 
+                (holdings_df['category'].astype(str).str.strip() != '')
+            ].copy()
             
-            # Pivot to get category columns
-            product_category_balances = holdings_by_category.pivot_table(
-                index='customer_id',
-                columns='category',
-                values='category_balance',
-                fill_value=0
-            )
-            product_category_balances.columns = [f'product_category_balance_{col}' for col in product_category_balances.columns]
-            
-            # Overall product statistics
+            # Overall product statistics (always create these)
             product_stats = holdings_df.groupby('customer_id').agg({
                 'balance': ['sum', 'mean', 'count']
             }).reset_index()
             product_stats.columns = ['customer_id', 'total_balance', 'avg_balance', 'product_count']
             
-            # Merge product features
-            product_features = product_stats.merge(
-                product_category_balances.reset_index(),
-                on='customer_id',
-                how='left'
-            )
+            # Category-based features (only if we have valid categories)
+            if len(holdings_with_category) > 0:
+                # Group by customer and product category
+                holdings_by_category = holdings_with_category.groupby(['customer_id', 'category']).agg({
+                    'balance': ['sum', 'count']
+                }).reset_index()
+                holdings_by_category.columns = ['customer_id', 'category', 'category_balance', 'category_count']
+                
+                if len(holdings_by_category) > 0:
+                    # Pivot to get category columns
+                    product_category_balances = holdings_by_category.pivot_table(
+                        index='customer_id',
+                        columns='category',
+                        values='category_balance',
+                        fill_value=0
+                    )
+                    if len(product_category_balances.columns) > 0:
+                        product_category_balances.columns = [f'product_category_balance_{col}' for col in product_category_balances.columns]
+                    else:
+                        product_category_balances = pd.DataFrame(index=product_stats['customer_id'])
+                    
+                    # Merge product features
+                    product_features = product_stats.merge(
+                        product_category_balances.reset_index(),
+                        on='customer_id',
+                        how='left'
+                    )
+                else:
+                    product_features = product_stats.copy()
+            else:
+                # No valid categories, but we still have product stats
+                print("Warning: No valid product categories found. Using product balance features only.")
+                product_features = product_stats.copy()
         else:
             # Create empty dataframe with customer_id
             product_features = pd.DataFrame({'customer_id': customers_df['customer_id']})
@@ -216,14 +257,15 @@ def load_and_prepare_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
         # Start with customers
         merged_df = customers_df.copy()
         
-        # Merge transaction features
+        # Merge transaction features (includes tx_stats with total_spent, avg_transaction, etc.)
         merged_df = merged_df.merge(transaction_features, on='customer_id', how='left')
         
         # Merge product features
         merged_df = merged_df.merge(product_features, on='customer_id', how='left')
         
-        # Merge amount features
-        merged_df = merged_df.merge(amount_features, on='customer_id', how='left')
+        # Merge amount features (includes importo_total, spending_avg, etc.)
+        # Note: Some columns may overlap (e.g., transaction_count), but pandas will add _x, _y suffixes
+        merged_df = merged_df.merge(amount_features, on='customer_id', how='left', suffixes=('', '_amount'))
         
         # Fill NaN values with 0 for numeric columns
         numeric_cols = merged_df.select_dtypes(include=[np.number]).columns
@@ -236,8 +278,16 @@ def load_and_prepare_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
         # SELECT FEATURE COLUMNS (matching original logic)
         # ============================================================
         
-        # Select transaction amount columns (importo, spending, transaction)
-        trans_codes = ['importo', 'spending', 'transaction']
+        print(f"\n{'=' * 80}")
+        print("Available columns in merged_df:")
+        print(f"{'=' * 80}")
+        for col in sorted(merged_df.columns):
+            dtype = merged_df[col].dtype
+            non_null = merged_df[col].notna().sum()
+            print(f"  - {col}: {dtype} ({non_null}/{len(merged_df)} non-null)")
+        
+        # Select transaction amount columns (importo, spending, transaction, total_spent, avg_transaction)
+        trans_codes = ['importo', 'spending', 'transaction', 'total_spent', 'avg_transaction', 'std_transaction']
         transaction_cols = [col for col in merged_df.columns if any(code in col.lower() for code in trans_codes)]
         
         # Select category columns (categoria_mode pattern)
@@ -246,19 +296,144 @@ def load_and_prepare_data() -> Tuple[pd.DataFrame, pd.DataFrame, List[str]]:
         # Select product category columns
         product_category_cols = [col for col in merged_df.columns if 'product_category' in col]
         
-        # Combine all numeric feature columns
-        numeric_cols = transaction_cols + category_cols + product_category_cols
+        # Select product balance columns (total_balance, avg_balance, product_count)
+        product_balance_cols = [col for col in merged_df.columns if any(code in col.lower() for code in ['total_balance', 'avg_balance', 'product_count'])]
         
-        # Remove customer_id and other non-feature columns
-        feature_cols = [col for col in numeric_cols if col != 'customer_id' and col in merged_df.columns]
+        print(f"\nFeature column selection:")
+        print(f"  - Transaction amount features: {transaction_cols}")
+        print(f"  - Category features: {category_cols}")
+        print(f"  - Product category features: {product_category_cols}")
+        print(f"  - Product balance features: {product_balance_cols}")
+        
+        # Combine all numeric feature columns
+        numeric_cols = transaction_cols + category_cols + product_category_cols + product_balance_cols
+        
+        # Remove customer_id and other non-feature columns, and ensure they're numeric
+        feature_cols = []
+        for col in numeric_cols:
+            if col == 'customer_id':
+                continue
+            if col not in merged_df.columns:
+                continue
+            # Check if column is numeric
+            if pd.api.types.is_numeric_dtype(merged_df[col]):
+                feature_cols.append(col)
+            else:
+                print(f"  Warning: Skipping non-numeric column: {col} (dtype: {merged_df[col].dtype})")
+        
+        # If still no features, try to get ALL numeric columns except customer_id
+        if len(feature_cols) == 0:
+            print("\n⚠️  No features found with pattern matching. Trying all numeric columns...")
+            all_numeric = merged_df.select_dtypes(include=[np.number]).columns.tolist()
+            feature_cols = [col for col in all_numeric if col != 'customer_id']
+            print(f"  Found {len(feature_cols)} numeric columns: {feature_cols}")
+        
+        # EMERGENCY FALLBACK: Use customer demographics only
+        if len(feature_cols) == 0:
+            print("\n" + "=" * 80)
+            print("⚠️  EMERGENCY FALLBACK: No transaction/holding features found.")
+            print("Creating demographic features from customers table only...")
+            print("=" * 80)
+            
+            # Work with merged_df which already has customer data
+            # Calculate age from birth_date if not already calculated
+            if 'age' not in merged_df.columns and 'birth_date' in merged_df.columns:
+                merged_df['birth_date'] = pd.to_datetime(merged_df['birth_date'], errors='coerce')
+                merged_df['age'] = (pd.Timestamp.now() - merged_df['birth_date']).dt.days / 365.25
+                age_median = merged_df['age'].median() if merged_df['age'].notna().any() else 45
+                merged_df['age'] = merged_df['age'].fillna(age_median)
+            elif 'age' not in merged_df.columns:
+                merged_df['age'] = 45  # Default age
+            
+            # Ensure annual_income exists
+            if 'annual_income' not in merged_df.columns:
+                merged_df['annual_income'] = 0
+            
+            # Fill missing values
+            merged_df['annual_income'] = merged_df['annual_income'].fillna(0)
+            merged_df['age'] = merged_df['age'].fillna(45)
+            
+            # Encode categorical features if available (one-hot encoding)
+            if 'gender' in merged_df.columns:
+                # One-hot encode gender
+                gender_encoded = pd.get_dummies(merged_df['gender'], prefix='gender', dummy_na=True)
+                # Only add columns that don't already exist
+                for col in gender_encoded.columns:
+                    if col not in merged_df.columns:
+                        merged_df[col] = gender_encoded[col]
+            
+            if 'segment_hint' in merged_df.columns:
+                # One-hot encode segment
+                segment_encoded = pd.get_dummies(merged_df['segment_hint'], prefix='segment', dummy_na=True)
+                # Only add columns that don't already exist
+                for col in segment_encoded.columns:
+                    if col not in merged_df.columns:
+                        merged_df[col] = segment_encoded[col]
+            
+            # Select demographic feature columns
+            demographic_cols = ['age', 'annual_income']
+            if 'gender' in merged_df.columns:
+                demographic_cols.extend([col for col in merged_df.columns if col.startswith('gender_')])
+            if 'segment_hint' in merged_df.columns:
+                demographic_cols.extend([col for col in merged_df.columns if col.startswith('segment_')])
+            
+            # Get only columns that exist and are numeric
+            feature_cols = [
+                col for col in demographic_cols 
+                if col in merged_df.columns 
+                and pd.api.types.is_numeric_dtype(merged_df[col])
+            ]
+            
+            # Fill any remaining NaN values
+            for col in feature_cols:
+                merged_df[col] = merged_df[col].fillna(0)
+            
+            print(f"✅ Created {len(feature_cols)} demographic features: {feature_cols}")
+            print("=" * 80 + "\n")
         
         if len(feature_cols) == 0:
-            raise ValueError(
+            # Provide detailed diagnostic information
+            diagnostic_info = []
+            diagnostic_info.append(f"Total customers: {len(customers_df)}")
+            diagnostic_info.append(f"Total transactions: {len(transactions_df) if len(transactions_df) > 0 else 0}")
+            diagnostic_info.append(f"Total holdings: {len(holdings_df) if len(holdings_df) > 0 else 0}")
+            
+            if len(transactions_df) > 0:
+                tx_with_cat = transactions_df[transactions_df['tx_category'].notna() & (transactions_df['tx_category'] != '')]
+                diagnostic_info.append(f"Transactions with valid category: {len(tx_with_cat)}/{len(transactions_df)}")
+                diagnostic_info.append(f"Transactions with amount > 0: {(transactions_df['amount'] > 0).sum()}/{len(transactions_df)}")
+                diagnostic_info.append(f"Transaction amount features found: {len(transaction_cols)}")
+                if len(transaction_cols) > 0:
+                    diagnostic_info.append(f"  Transaction columns: {transaction_cols}")
+            else:
+                diagnostic_info.append("No transaction data available")
+            
+            if len(holdings_df) > 0:
+                holdings_with_cat = holdings_df[holdings_df['category'].notna() & (holdings_df['category'] != '')]
+                diagnostic_info.append(f"Holdings with valid category: {len(holdings_with_cat)}/{len(holdings_df)}")
+                diagnostic_info.append(f"Holdings with balance > 0: {(holdings_df['balance'] > 0).sum()}/{len(holdings_df)}")
+                diagnostic_info.append(f"Product category features found: {len(product_category_cols)}")
+                diagnostic_info.append(f"Product balance features found: {len(product_balance_cols)}")
+                if len(product_balance_cols) > 0:
+                    diagnostic_info.append(f"  Product balance columns: {product_balance_cols}")
+            else:
+                diagnostic_info.append("No holdings data available")
+            
+            diagnostic_info.append(f"\nAll columns in merged_df: {list(merged_df.columns)}")
+            numeric_cols_list = list(merged_df.select_dtypes(include=[np.number]).columns)
+            diagnostic_info.append(f"Numeric columns: {numeric_cols_list}")
+            
+            error_msg = (
                 "No features found. Please ensure:\n"
-                "1. Transaction data is uploaded with 'tx_category' column\n"
-                "2. Product data is uploaded with 'category' column\n"
-                "3. Transaction amounts are available"
+                "1. Transaction data is uploaded with 'tx_category' column (or at least transaction amounts)\n"
+                "2. Product data is uploaded with 'category' column (or at least product balances)\n"
+                "3. Transaction amounts are available\n\n"
+                f"Diagnostic information:\n" + "\n".join(f"  - {info}" for info in diagnostic_info)
             )
+            print(f"\n{'=' * 80}")
+            print("ERROR: " + error_msg.replace('\n', '\n'))
+            print(f"{'=' * 80}\n")
+            raise ValueError(error_msg)
         
         print(f"\nSelected {len(feature_cols)} feature columns:")
         print(f"  - Transaction amount features: {len(transaction_cols)}")
@@ -501,20 +676,20 @@ def save_clustering_to_db(
                     cluster_batch
                 )
                 
-                # Insert recommendations
+                # Insert recommendations (PRE-COMPUTED - no AI, fast rule-based scoring)
                 rec_ids = []
                 for rec_data in recommendation_batch:
                     cursor.execute(
                         """
                         INSERT INTO recommendations 
-                        (run_id, customer_id, product_code, acceptance_prob, expected_revenue)
-                        VALUES (?, ?, ?, ?, ?)
+                        (run_id, customer_id, product_code, acceptance_prob, expected_revenue, summary_calculated)
+                        VALUES (?, ?, ?, ?, ?, 1)
                         """,
                         rec_data
                     )
                     rec_ids.append(cursor.lastrowid)
                 
-                # Insert explanations
+                # Insert explanations (PRE-COMPUTED - simple rule-based, not AI-generated)
                 for rec_id, explanation in zip(rec_ids, explanation_data):
                     cursor.execute(
                         """
@@ -526,10 +701,11 @@ def save_clustering_to_db(
                             rec_id,
                             json.dumps(explanation),
                             explanation.get('reason', 'Category-based clustering recommendation'),
-                            'category_clustering_v1'
+                            'batch_rule_based_v1'  # Mark as batch/rule-based, not AI
                         )
                     )
                 
+                # Commit the batch (SQLite handles transactions automatically)
                 conn.commit()
                 
                 # Clear batches
@@ -540,7 +716,7 @@ def save_clustering_to_db(
                 if (idx + 1) % 1000 == 0:
                     print(f"  Processed {idx + 1}/{total} customers...")
         
-        # Final commit
+        # Final commit for any remaining items
         if cluster_batch:
             cursor.executemany(
                 """
@@ -550,6 +726,36 @@ def save_clustering_to_db(
                 """,
                 cluster_batch
             )
+            
+            # Insert any remaining recommendations
+            rec_ids = []
+            for rec_data in recommendation_batch:
+                cursor.execute(
+                    """
+                    INSERT INTO recommendations 
+                    (run_id, customer_id, product_code, acceptance_prob, expected_revenue, summary_calculated)
+                    VALUES (?, ?, ?, ?, ?, 1)
+                    """,
+                    rec_data
+                )
+                rec_ids.append(cursor.lastrowid)
+            
+            # Insert any remaining explanations
+            for rec_id, explanation in zip(rec_ids, explanation_data):
+                cursor.execute(
+                    """
+                    INSERT INTO recommendation_explanations 
+                    (recommendation_id, key_factors_json, narrative, model_name)
+                    VALUES (?, ?, ?, ?)
+                    """,
+                    (
+                        rec_id,
+                        json.dumps(explanation),
+                        explanation.get('reason', 'Category-based clustering recommendation'),
+                        'batch_rule_based_v1'
+                    )
+                )
+            
             conn.commit()
         
         print(f"✓ Saved clustering results for {total} customers")

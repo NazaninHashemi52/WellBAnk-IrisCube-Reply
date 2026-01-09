@@ -14,8 +14,10 @@ import {
   Sparkles,
   RefreshCw,
   FileText,
+  Lightbulb,
 } from "lucide-react";
-import { getRecommendationById, regenerateMessage, makeDecision } from "../api/offers";
+import { getRecommendationById, regenerateMessage, makeDecision, getOfferCatalog, changeService, getAdvisorStrategy, getFullProductCatalog } from "../api/offers";
+import { API_BASE_URL, apiRequest } from "../api/config";
 
 /**
  * Enhanced Recommendation Modal for Offer Workbench
@@ -53,7 +55,138 @@ export default function RecommendationModalEnhanced({
       setDraftMessage(recommendationProp.draft_message || "");
       setIsLoading(false);
     }
-  }, [recommendationId, recommendationProp]);
+    
+    // Load product catalog for swap functionality
+    loadProductCatalog();
+    
+    // Load AI reasoning if we have customer context
+    if (customerContext?.customer_id) {
+      loadAIReasoning(customerContext.customer_id);
+    }
+    
+    // Set initial selected product
+    if (recommendationProp?.product_code) {
+      setSelectedProductCode(recommendationProp.product_code);
+    } else if (recommendation?.product_code) {
+      setSelectedProductCode(recommendation.product_code);
+    }
+  }, [recommendationId, recommendationProp, customerContext, recommendation]);
+  
+  async function loadProductCatalog() {
+    try {
+      const catalog = await getOfferCatalog();
+      setProductCatalog(catalog.catalog || {});
+      
+      // Also load full product catalog from ProductRecommendationEngine
+      try {
+        const fullCatalog = await getFullProductCatalog();
+        setFullProductCatalog(fullCatalog.catalog || catalog.catalog || {});
+      } catch (err) {
+        console.warn("Failed to load full product catalog, using basic catalog:", err);
+        setFullProductCatalog(catalog.catalog || {});
+      }
+    } catch (err) {
+      console.error("Failed to load product catalog:", err);
+    }
+  }
+  
+  async function generateReasoningForProduct(productCode, customerId) {
+    if (!customerId || !productCode) return;
+    
+    try {
+      // Get customer intelligence to generate reasoning for the selected product
+      const strategy = await getAdvisorStrategy(customerId);
+      if (strategy && strategy.recommendations) {
+        // Check if this product is in the recommendations
+        const productRec = strategy.recommendations.find(rec => rec.product_code === productCode);
+        if (productRec) {
+          setSelectedProductReasoning({
+            detailed_reasoning: productRec.detailed_reasoning,
+            short_reasoning: productRec.short_reasoning,
+            key_benefits: productRec.key_benefits,
+            fitness_score: productRec.fitness_score,
+            triggers_used: productRec.triggers_used,
+          });
+          setFitnessScore(productRec.fitness_score);
+        } else {
+          // Product not in recommendations, create basic reasoning from catalog
+          const catalogProduct = fullProductCatalog?.[productCode] || productCatalog?.[productCode];
+          if (catalogProduct) {
+            setSelectedProductReasoning({
+              detailed_reasoning: `This product (${catalogProduct.name || catalogProduct.display_name}) is available in our catalog. Please review the product details and customer profile to determine suitability.`,
+              short_reasoning: catalogProduct.description || catalogProduct.eligibility_notes || "Product available for consideration",
+              key_benefits: catalogProduct.key_benefits || [],
+              fitness_score: null, // Not calculated for non-recommended products
+              triggers_used: [],
+            });
+            setFitnessScore(null);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to generate reasoning for product:", err);
+    }
+  }
+  
+  function handleProductSelection(productCode) {
+    setSelectedProductCode(productCode);
+    const customerId = customerContext?.customer_id || recommendation?.customer_id;
+    if (customerId && productCode) {
+      generateReasoningForProduct(productCode, customerId);
+      // Clear current draft message to trigger regeneration
+      setDraftMessage("");
+    }
+  }
+  
+  // Regenerate message when product changes
+  useEffect(() => {
+    if (selectedProductCode && (selectedProductReasoning || aiReasoning)) {
+      generateMessage();
+    }
+  }, [selectedProductCode, selectedProductReasoning]);
+  
+  async function loadAIReasoning(customerId) {
+    try {
+      const strategy = await getAdvisorStrategy(customerId);
+      if (strategy && strategy.recommendations && strategy.recommendations.length > 0) {
+        // Find the recommendation matching the current product
+        const currentProductCode = recommendation?.product_code || recommendationProp?.product_code;
+        const matchingRec = strategy.recommendations.find(
+          rec => rec.product_code === currentProductCode
+        );
+        if (matchingRec) {
+          setAiReasoning({
+            detailed_reasoning: matchingRec.detailed_reasoning,
+            short_reasoning: matchingRec.short_reasoning,
+            key_benefits: matchingRec.key_benefits,
+            triggers_used: matchingRec.triggers_used,
+          });
+          setFitnessScore(matchingRec.fitness_score);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load AI reasoning:", err);
+    }
+  }
+  
+  async function handleProductSwap(newProductCode) {
+    if (!recommendationId) {
+      alert("Cannot swap product: No recommendation ID available");
+      return;
+    }
+    
+    try {
+      await changeService(recommendationId, newProductCode);
+      // Reload recommendation to get updated data
+      if (recommendationId) {
+        await loadRecommendation();
+      }
+      setShowProductSwap(false);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      setError(`Failed to swap product: ${err.message}`);
+    }
+  }
 
   async function loadRecommendation() {
     try {
@@ -70,15 +203,39 @@ export default function RecommendationModalEnhanced({
   }
 
   async function generateMessage() {
-    if (!recommendation) return;
+    if (!recommendation && !selectedProductCode) return;
 
     setIsGeneratingMessage(true);
     try {
-      // If we have a recommendationId, use the API endpoint
-      if (recommendationId) {
+      // If product was changed via dropdown, generate message for new product
+      if (selectedProductCode && selectedProductCode !== recommendation?.product_code) {
+        const customerId = customerContext?.customer_id || recommendation?.customer_id;
+        const selectedProduct = fullProductCatalog?.[selectedProductCode] || productCatalog?.[selectedProductCode];
+        const reasoning = selectedProductReasoning || aiReasoning;
+        
+        // Generate message using AI reasoning for selected product
+        const customerName = customerContext?.name || recommendation?.customer_name || "Customer";
+        const productName = selectedProduct?.name || selectedProduct?.display_name || selectedProductCode;
+        
+        let message = `Good morning ${customerName},\n\n`;
+        message += `I was reviewing your portfolio and thought that ${productName} could be a great fit for your financial needs.\n\n`;
+        
+        if (reasoning?.short_reasoning) {
+          message += `${reasoning.short_reasoning}\n\n`;
+        }
+        
+        if (reasoning?.key_benefits && reasoning.key_benefits.length > 0) {
+          message += `Key benefits:\n${reasoning.key_benefits.slice(0, 3).map(b => `• ${b}`).join('\n')}\n\n`;
+        }
+        
+        message += `Would you like to discuss this briefly?\n\nBest regards,\nWellBank Team`;
+        
+        setDraftMessage(message);
+      } else if (recommendationId) {
+        // If we have a recommendationId, use the API endpoint
         const result = await regenerateMessage(recommendationId, messageTone);
         setDraftMessage(result.draft_message);
-      } else if (recommendation.draft_message) {
+      } else if (recommendation?.draft_message) {
         // Use existing draft message
         setDraftMessage(recommendation.draft_message);
       }
@@ -94,6 +251,20 @@ export default function RecommendationModalEnhanced({
       generateMessage();
     }
   }, [recommendation, messageTone, includeReasons]);
+  
+  // Regenerate message when product changes via dropdown
+  useEffect(() => {
+    if (selectedProductCode && selectedProductCode !== recommendation?.product_code && (selectedProductReasoning || aiReasoning)) {
+      generateMessage();
+    }
+  }, [selectedProductCode, selectedProductReasoning]);
+  
+  // Regenerate message when product changes via dropdown
+  useEffect(() => {
+    if (selectedProductCode && selectedProductCode !== recommendation?.product_code && (selectedProductReasoning || aiReasoning)) {
+      generateMessage();
+    }
+  }, [selectedProductCode, selectedProductReasoning]);
 
   async function handleSaveEdit() {
     try {
@@ -225,13 +396,55 @@ export default function RecommendationModalEnhanced({
       >
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "24px" }}>
-          <div>
+          <div style={{ flex: 1 }}>
             <h2 style={{ fontSize: "24px", fontWeight: 800, color: "#0f172a", marginBottom: "8px" }}>
               Review & Send Offer
             </h2>
-            <div style={{ fontSize: "14px", color: "#64748b" }}>
-              {recommendation.product_name || recommendation.product_code}
+            <div style={{ fontSize: "14px", color: "#64748b", marginBottom: "12px" }}>
+              {selectedProductCode 
+                ? (fullProductCatalog?.[selectedProductCode]?.name || productCatalog?.[selectedProductCode]?.display_name || selectedProductCode)
+                : (recommendation.product_name || recommendation.product_code)}
             </div>
+            
+            {/* Product Selection Dropdown */}
+            {fullProductCatalog && Object.keys(fullProductCatalog).length > 0 && (
+              <div style={{ marginTop: "12px" }}>
+                <label style={{ 
+                  fontSize: "12px", 
+                  fontWeight: 600, 
+                  color: "#64748b", 
+                  marginBottom: "6px",
+                  display: "block",
+                }}>
+                  Select Product from Catalog:
+                </label>
+                <select
+                  value={selectedProductCode || recommendation.product_code || ""}
+                  onChange={(e) => handleProductSelection(e.target.value)}
+                  style={{
+                    width: "100%",
+                    maxWidth: "400px",
+                    padding: "8px 12px",
+                    border: "2px solid #e2e8f0",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: 500,
+                    color: "#1e293b",
+                    background: "white",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value={recommendation.product_code || ""}>
+                    {recommendation.product_name || recommendation.product_code || "Select a product..."}
+                  </option>
+                  {Object.entries(fullProductCatalog).map(([code, product]) => (
+                    <option key={code} value={code}>
+                      {product.name || product.display_name || code} - {product.category || "Unknown"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -356,20 +569,241 @@ export default function RecommendationModalEnhanced({
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Category</div>
-                <div style={{ fontSize: "16px", fontWeight: 600, color: "#1e293b" }}>
-                  {recommendation.category || "N/A"}
+                <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Fitness Score</div>
+                <div style={{ fontSize: "20px", fontWeight: 700, color: (selectedProductReasoning?.fitness_score ?? fitnessScore) !== null ? ((selectedProductReasoning?.fitness_score ?? fitnessScore) >= 80 ? "#10b981" : (selectedProductReasoning?.fitness_score ?? fitnessScore) >= 70 ? "#3b82f6" : "#f59e0b") : "#64748b" }}>
+                  {(selectedProductReasoning?.fitness_score ?? fitnessScore) !== null ? `${selectedProductReasoning?.fitness_score ?? fitnessScore}%` : "N/A"}
                 </div>
               </div>
             </div>
           </div>
         </div>
+        
+        {/* Key Benefits from AI - Why This Fits */}
+        {aiReasoning && aiReasoning.key_benefits && aiReasoning.key_benefits.length > 0 && (
+          <div style={{ marginBottom: "24px" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b", marginBottom: "12px", display: "flex", alignItems: "center", gap: "8px" }}>
+              <Lightbulb size={18} style={{ color: "#8b5cf6" }} />
+              Why This Fits - Key Benefits
+            </h3>
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%)",
+                borderRadius: "12px",
+                padding: "20px",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "14px", color: "#1e293b", lineHeight: "1.8" }}>
+                {aiReasoning.key_benefits.map((benefit, idx) => (
+                  <li key={idx} style={{ marginBottom: "8px" }}>
+                    <strong style={{ color: "#8b5cf6" }}>✓</strong> {benefit}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
 
-        {/* AI Explanation Panel */}
+        {/* AI Reasoning Panel - Reasoning Layer */}
+        {(aiReasoning || selectedProductReasoning) && (
+          <div style={{ marginBottom: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Sparkles size={18} style={{ color: "#8b5cf6" }} />
+                <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>AI Reasoning - Why This Fits</h3>
+                {(fitnessScore !== null || selectedProductReasoning?.fitness_score !== null) && (
+                  <div style={{
+                    padding: "4px 8px",
+                    background: (selectedProductReasoning?.fitness_score ?? fitnessScore) >= 70 ? "#10b981" : (selectedProductReasoning?.fitness_score ?? fitnessScore) >= 50 ? "#f59e0b" : "#ef4444",
+                    color: "white",
+                    borderRadius: "6px",
+                    fontSize: "11px",
+                    fontWeight: 600,
+                  }}>
+                    Fitness: {selectedProductReasoning?.fitness_score ?? fitnessScore ?? "N/A"}%
+                  </div>
+                )}
+              </div>
+              {!isEditing && status !== "sent" && status !== "dismissed" && (
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    onClick={() => setShowProductSwap(!showProductSwap)}
+                    style={{
+                      padding: "6px 12px",
+                      background: "#8b5cf6",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <RefreshCw size={14} />
+                    Swap Product
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    style={{
+                      padding: "6px 12px",
+                      background: "#3b82f6",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <Edit size={14} />
+                    Edit
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* Product Swap Modal */}
+            {showProductSwap && productCatalog && (
+              <div style={{
+                marginBottom: "16px",
+                padding: "16px",
+                background: "#f8fafc",
+                border: "2px solid #8b5cf6",
+                borderRadius: "8px",
+              }}>
+                <div style={{ fontSize: "13px", fontWeight: 600, color: "#1e293b", marginBottom: "12px" }}>
+                  Select Alternative Product:
+                </div>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, 1fr)",
+                  gap: "8px",
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                }}>
+                  {Object.entries(productCatalog).map(([code, info]) => (
+                    code !== recommendation?.product_code && (
+                      <button
+                        key={code}
+                        onClick={() => handleProductSwap(code)}
+                        style={{
+                          padding: "8px 12px",
+                          background: "white",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "6px",
+                          fontSize: "12px",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "#8b5cf6";
+                          e.currentTarget.style.background = "#f3f4f6";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "#e2e8f0";
+                          e.currentTarget.style.background = "white";
+                        }}
+                      >
+                        <div style={{ fontWeight: 600, color: "#1e293b" }}>{info.display_name}</div>
+                        <div style={{ fontSize: "11px", color: "#64748b" }}>{info.category}</div>
+                      </button>
+                    )
+                  ))}
+                </div>
+                <button
+                  onClick={() => setShowProductSwap(false)}
+                  style={{
+                    marginTop: "12px",
+                    padding: "6px 12px",
+                    background: "#e2e8f0",
+                    color: "#64748b",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            
+            {/* AI Reasoning Content */}
+            <div style={{
+              background: "linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%)",
+              borderRadius: "12px",
+              padding: "20px",
+              border: "1px solid #e2e8f0",
+            }}>
+              <div style={{ fontSize: "14px", fontWeight: 600, color: "#1e293b", marginBottom: "12px" }}>
+                Detailed Analysis
+              </div>
+              <div style={{ 
+                fontSize: "14px", 
+                lineHeight: "1.6", 
+                color: "#1e293b",
+                marginBottom: "16px",
+              }}>
+                {(selectedProductReasoning || aiReasoning)?.detailed_reasoning || 
+                 (selectedProductReasoning || aiReasoning)?.short_reasoning || 
+                 "No reasoning available"}
+              </div>
+              
+              {/* Key Benefits */}
+              {((selectedProductReasoning || aiReasoning)?.key_benefits?.length > 0) && (
+                <div style={{ marginTop: "16px" }}>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#1e293b", marginBottom: "8px" }}>
+                    Key Benefits:
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: "20px", fontSize: "13px", color: "#475569", lineHeight: "1.8" }}>
+                    {(selectedProductReasoning || aiReasoning).key_benefits.map((benefit, idx) => (
+                      <li key={idx}>{benefit}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {/* Triggers Used */}
+              {((selectedProductReasoning || aiReasoning)?.triggers_used?.length > 0) && (
+                <div style={{ marginTop: "12px", padding: "10px", background: "#eff6ff", borderRadius: "6px" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 600, color: "#1e40af", marginBottom: "6px" }}>
+                    Recommendation Triggers:
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {(selectedProductReasoning || aiReasoning).triggers_used.map((trigger, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          padding: "4px 8px",
+                          background: "#dbeafe",
+                          color: "#1e40af",
+                          borderRadius: "4px",
+                          fontSize: "11px",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {trigger}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* AI Explanation Panel - Fallback to existing explanation */}
         <div style={{ marginBottom: "24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
             <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#1e293b" }}>Why This Offer?</h3>
-            {!isEditing && status !== "sent" && status !== "dismissed" && (
+            {!isEditing && status !== "sent" && status !== "dismissed" && !aiReasoning && (
               <button
                 onClick={() => setIsEditing(true)}
                 style={{
@@ -587,7 +1021,7 @@ export default function RecommendationModalEnhanced({
           <Shield size={16} style={{ flexShrink: 0, marginTop: "2px" }} />
           <div>
             <strong>Compliance Note:</strong> This is not financial advice. All recommendations require human review
-            before sending to customers. Generated by AI – Reviewed by employee.
+            before sending to customers.
           </div>
         </div>
 

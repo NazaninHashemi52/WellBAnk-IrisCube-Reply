@@ -16,6 +16,16 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* FORCE VISIBILITY - Remove this after fixing */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: #0B0E14 !important;
+  overflow: visible !important;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -31,12 +41,18 @@ body {
   width: 100%;
   min-width: 320px;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: visible;
+  overflow-y: auto;
+  background-color: #0B0E14 !important;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+  background-color: #0B0E14;
+  position: relative;
+  z-index: 1;
+  overflow: visible;
 }
 
 h1 {

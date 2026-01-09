@@ -63,3 +63,16 @@ backend/uploads/prodotti/
 # Models (optional - uncomment if models are too large)
 # backend/models/*.pkl
 # backend/models/*.joblib
+
+# Scripts and utilities (development only)
+backend/scripts/
+*.part*
+*.backup
+
+# CSV files (large datasets)
+*.csv
+!backend/data_with_clusters_category.csv
+
+# Virtual environments
+backend/venv/
+frontend/node_modules/

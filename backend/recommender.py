@@ -286,6 +286,24 @@ class WellbankRecommender:
             owned = self.get_owned_products(client_id)
             recommended_products = [p for p in recommended_products if p not in owned]
         
+        # If all products are owned, expand to all available products (except BASIC_CHECKING as last resort)
+        if not recommended_products:
+            # Get all products from catalog, excluding owned and BASIC_CHECKING
+            all_products = [
+                "DPAM682", "FPEN541", "SAVINGS_PLAN",  # Savings/Investments
+                "CADB439", "CACR432", "REWARDS_CREDIT",  # Credit Cards
+                "PRPE078", "CADB783",  # Young Professional products
+                "MTUU356", "ASSA566", "MORTGAGE",  # Family/Home
+                "SINV263", "CINV819", "PREMIUM_INVESTMENT",  # Investments
+                "CCOR602", "CRDT356", "PLZZ334",  # Accounts/Credit
+                "DPAM997", "DPRI866", "PARK443",  # Premium/Services
+                "PRPE771", "CACR748", "CADB783"  # Business/Premium
+            ]
+            recommended_products = [p for p in all_products if p not in owned and p != "BASIC_CHECKING"]
+            # Only use BASIC_CHECKING as absolute last resort
+            if not recommended_products:
+                recommended_products = ["BASIC_CHECKING"] if "BASIC_CHECKING" not in owned else []
+        
         # Limit to top_n
         recommended_products = recommended_products[:top_n]
         

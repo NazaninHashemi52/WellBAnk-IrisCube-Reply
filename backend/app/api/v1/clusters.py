@@ -524,10 +524,34 @@ async def get_cluster_recommendations(
                     customer_cluster_info = cursor.fetchone()
                     
                     # Get status fields from row (already in SELECT, use .get() for safety)
-                    edited_narrative = row.get('edited_narrative') if has_edited else None
-                    status = row.get('status') if has_status else 'pending'
-                    sent_at = row.get('sent_at') if has_sent else None
-                    dismissed_at = row.get('dismissed_at') if has_dismissed else None
+                    # Get optional fields safely (sqlite3.Row doesn't have .get() method)
+                    edited_narrative = None
+                    if has_edited:
+                        try:
+                            edited_narrative = row['edited_narrative'] if row['edited_narrative'] else None
+                        except (KeyError, IndexError):
+                            edited_narrative = None
+                    
+                    status = 'pending'
+                    if has_status:
+                        try:
+                            status = row['status'] if row['status'] else 'pending'
+                        except (KeyError, IndexError):
+                            status = 'pending'
+                    
+                    sent_at = None
+                    if has_sent:
+                        try:
+                            sent_at = row['sent_at'] if row['sent_at'] else None
+                        except (KeyError, IndexError):
+                            sent_at = None
+                    
+                    dismissed_at = None
+                    if has_dismissed:
+                        try:
+                            dismissed_at = row['dismissed_at'] if row['dismissed_at'] else None
+                        except (KeyError, IndexError):
+                            dismissed_at = None
                     
                     recommendations.append({
                         "id": row['id'],
@@ -549,7 +573,12 @@ async def get_cluster_recommendations(
                         "dismissed_at": dismissed_at
                     })
                 except Exception as row_error:
-                    print(f"[CLUSTERS API] Error processing row {row.get('id', 'unknown')}: {row_error}")
+                    # Get row ID safely for error logging
+                    try:
+                        row_id = row['id'] if row['id'] else 'unknown'
+                    except (KeyError, IndexError):
+                        row_id = 'unknown'
+                    print(f"[CLUSTERS API] Error processing row {row_id}: {row_error}")
                     import traceback
                     traceback.print_exc()
                     continue  # Skip this row and continue
@@ -738,8 +767,11 @@ async def get_recommendation_detail(recommendation_id: int):
                     re.model_name,
                     c.first_name,
                     c.last_name,
+                    c.birth_date,
+                    c.gender,
                     c.annual_income,
                     c.profession,
+                    c.segment_hint,
                     cc.cluster_id
                 FROM recommendations r
                 LEFT JOIN recommendation_explanations re ON r.id = re.recommendation_id
@@ -759,21 +791,76 @@ async def get_recommendation_detail(recommendation_id: int):
                 except:
                     pass
             
+            # Get additional customer data for customer_snapshot
+            customer_name = f"{row['first_name'] or ''} {row['last_name'] or ''}".strip()
+            if not customer_name:
+                customer_name = row['customer_id']
+            
+            # Calculate age from birth_date if available
+            exact_age = None
+            age_range = None
+            if row['birth_date']:
+                try:
+                    from datetime import datetime
+                    birth = datetime.strptime(row['birth_date'], "%Y-%m-%d")
+                    today = datetime.now()
+                    exact_age = today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
+                    if exact_age < 30:
+                        age_range = "Under 30"
+                    elif exact_age < 45:
+                        age_range = "30-45"
+                    elif exact_age < 60:
+                        age_range = "45-60"
+                    else:
+                        age_range = "60+"
+                except:
+                    pass
+            
+            # Format gender
+            gender_display = None
+            if row['gender']:
+                gender_map = {'F': 'Female', 'M': 'Male', 'f': 'Female', 'm': 'Male'}
+                gender_display = gender_map.get(row['gender'], row['gender'])
+            
+            # Format segment
+            segment_display = None
+            if row['segment_hint']:
+                segment_map = {
+                    'SB': 'Small Business',
+                    'MM': 'Mass Market',
+                    'PB': 'Private Banking',
+                    'WM': 'Wealth Management'
+                }
+                segment_display = segment_map.get(row['segment_hint'], row['segment_hint'])
+            
+            # Build response in the format expected by frontend
             return {
-                "id": row['id'],
+                "recommendation_id": row['id'],
                 "run_id": row['run_id'],
-                "customer_id": row['customer_id'],
-                "customer_name": f"{row['first_name'] or ''} {row['last_name'] or ''}".strip(),
-                "customer_income": row['annual_income'],
-                "customer_profession": row['profession'],
-                "cluster_id": row['cluster_id'],
-                "product_code": row['product_code'],
-                "acceptance_probability": row['acceptance_prob'],
-                "expected_revenue": row['expected_revenue'],
-                "status": row['status'],
-                "narrative": row['edited_narrative'] or row['narrative'],  # Use edited if available
-                "original_narrative": row['narrative'],
-                "key_factors": key_factors,
+                "customer_snapshot": {
+                    "customer_id": row['customer_id'],
+                    "customer_name": customer_name,
+                    "exact_age": exact_age,
+                    "age_range": age_range,
+                    "gender": gender_display,
+                    "profession": row['profession'],
+                    "annual_income": row['annual_income'],
+                    "segment_hint": row['segment_hint'],
+                    "segment": segment_display,
+                    "cluster_id": row['cluster_id'],
+                },
+                "recommended_service": {
+                    "id": row['id'],
+                    "product_code": row['product_code'],
+                    "acceptance_probability": float(row['acceptance_prob']),
+                    "expected_revenue": float(row['expected_revenue']),
+                    "status": row['status'] or 'pending',
+                },
+                "ai_explanation": {
+                    "narrative": row['edited_narrative'] or row['narrative'] or "No explanation available",
+                    "original_narrative": row['narrative'],
+                    "key_factors": key_factors,
+                },
                 "model_name": row['model_name'],
                 "model_confidence": "high" if row['acceptance_prob'] > 0.7 else "medium" if row['acceptance_prob'] > 0.5 else "low",
                 "is_edited": row['edited_at'] is not None,

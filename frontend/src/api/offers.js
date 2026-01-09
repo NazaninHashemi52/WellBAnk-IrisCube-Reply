@@ -20,7 +20,7 @@ export async function getPendingRecommendations(status = 'pending', limit = 50, 
 }
 
 export async function getRecommendationById(recommendationId) {
-  return apiRequest(`${API_BASE_URL}/offers/recommendations/${recommendationId}`);
+  return apiRequest(`${API_BASE_URL}/recommendations/${recommendationId}`);
 }
 
 export async function regenerateMessage(recommendationId, tone = 'friendly') {
@@ -53,5 +53,49 @@ export async function generateOnDemandRecommendation(customerId, topN = 3) {
     method: 'POST',
     body: JSON.stringify({ customer_id: customerId, top_n: topN }),
   });
+}
+
+export async function getProductFitAnalysis(recommendationId) {
+  return apiRequest(`${API_BASE_URL}/offers/recommendations/${recommendationId}/product-fit`);
+}
+
+export async function getAIProfileSummary(recommendationId) {
+  return apiRequest(`${API_BASE_URL}/offers/recommendations/${recommendationId}/ai-profile`);
+}
+
+export async function updateServiceName(recommendationId, serviceName) {
+  return apiRequest(`${API_BASE_URL}/offers/recommendations/${recommendationId}/service-name`, {
+    method: 'PUT',
+    body: JSON.stringify({ service_name: serviceName }),
+  });
+}
+
+export async function getAdvisorStrategy(customerId) {
+  return apiRequest(`${API_BASE_URL}/advisor/strategy/${customerId}`);
+}
+
+export async function getCustomerIntelligence(customerId) {
+  return apiRequest(`${API_BASE_URL}/advisor/customer-intelligence/${customerId}`);
+}
+
+export async function getFullProductCatalog() {
+  return apiRequest(`${API_BASE_URL}/offers/product-catalog-full`);
+}
+
+export async function checkAIStatus() {
+  return apiRequest(`${API_BASE_URL}/offers/ai-status`);
+}
+
+export async function getServicesByCategory() {
+  return apiRequest(`${API_BASE_URL}/offers/services-by-category`);
+}
+
+export async function getCustomerRecommendations(customerId, runId = null) {
+  const params = new URLSearchParams();
+  if (runId) {
+    params.append('run_id', runId.toString());
+  }
+  const queryString = params.toString();
+  return apiRequest(`${API_BASE_URL}/customers/${customerId}/recommendations${queryString ? '?' + queryString : ''}`);
 }
 

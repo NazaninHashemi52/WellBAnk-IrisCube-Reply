@@ -1,67 +1,218 @@
-# 📚 Dataset Documentation
+# WellBank - AI-Powered Customer Relationship Management System
 
-This document describes the structure and purpose of the three main datasets used in the project: **Anagrafiche**, **Possesso prodotti**, and **Transazioni**. The datasets are linked through the field `codice_cliente`.
+A comprehensive banking CRM platform that leverages machine learning and AI to provide intelligent customer segmentation, product recommendations, and personalized advisor tools.
+
+## 🎯 Features
+
+### Core Capabilities
+- **Customer Segmentation**: Advanced clustering algorithms to identify customer groups (Silver Savers, Digital Nomads, Business Prime, etc.)
+- **Product Recommendations**: AI-powered recommendation engine that suggests banking products based on customer profiles
+- **Batch Processing**: Process thousands of customer records simultaneously with progress tracking
+- **Strategic Advisor Assistant**: Interactive tool for advisors to generate personalized customer pitches
+- **Data Management**: Upload and manage customer datasets (demographics, transactions, product holdings)
+
+### Technical Highlights
+- **Backend**: FastAPI with SQLite database
+- **Frontend**: React with Vite, modern UI with glassmorphism design
+- **AI Integration**: Anthropic Claude API for intelligent message generation
+- **Machine Learning**: Scikit-learn for customer clustering and recommendation scoring
+
+## 📋 Prerequisites
+
+- Python 3.8+
+- Node.js 18+
+- Anthropic API key (for AI features)
+
+## 🚀 Quick Start
+
+### Backend Setup
+
+1. Navigate to the backend directory:
+```bash
+cd backend
+```
+
+2. Create a virtual environment:
+```bash
+python -m venv venv
+```
+
+3. Activate the virtual environment:
+   - Windows: `venv\Scripts\activate`
+   - Linux/Mac: `source venv/bin/activate`
+
+4. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+5. Create a `.env` file in the `backend` directory:
+```env
+ANTHROPIC_API_KEY=your_api_key_here
+ENVIRONMENT=development
+```
+
+6. Initialize the database:
+```bash
+python init_db.py
+```
+
+7. Start the server:
+```bash
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+The API will be available at `http://localhost:8000`
+
+### Frontend Setup
+
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Start the development server:
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173`
+
+## 📁 Project Structure
+
+```
+Project/
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/          # API endpoints
+│   │   ├── core/             # Configuration and core utilities
+│   │   ├── models/           # Database models
+│   │   └── services/         # Business logic services
+│   ├── scripts/              # Utility scripts (development)
+│   ├── migrations/           # Database migrations
+│   ├── models/               # ML model files
+│   └── uploads/              # Uploaded datasets
+├── frontend/
+│   ├── src/
+│   │   ├── api/              # API client functions
+│   │   ├── components/       # React components
+│   │   └── assets/           # Static assets
+│   └── public/               # Public files
+└── README.md
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file in the `backend` directory with:
+
+```env
+ANTHROPIC_API_KEY=your_anthropic_api_key
+ENVIRONMENT=development  # or production
+```
+
+### Database
+
+The application uses SQLite by default. The database file (`wellbank.db`) is created automatically on first run.
+
+To reset the database:
+```bash
+cd backend
+python init_db.py
+```
+
+## 📊 Data Format
+
+The system expects three main datasets:
+
+1. **Anagrafiche** (Customer Demographics): Customer personal and professional information
+2. **Possesso Prodotti** (Product Holdings): Current banking products per customer
+3. **Movimenti** (Transactions): Customer transaction history
+
+See the main `README.md` for detailed dataset schema documentation.
+
+## 🎨 Key Components
+
+### Employee Dashboard
+- Customer search and filtering
+- Deep dive into individual customer profiles
+- Strategic Advisor Assistant for generating personalized pitches
+- Product recommendation visualization
+
+### Batch Processing
+- Upload and process customer datasets
+- Track processing progress
+- View batch results and statistics
+
+### Service Suggestions
+- View all customer recommendations
+- Filter by cluster, status, or search terms
+- Bulk actions and management tools
+
+## 🔒 Security Notes
+
+- Never commit API keys or `.env` files to version control
+- The debug endpoint is only enabled in development mode
+- All sensitive data should be handled according to banking regulations
+
+## 🛠️ Development
+
+### Running Tests
+
+Utility scripts are available in `backend/scripts/` for development and debugging:
+- `check_batch_results.py`: Verify batch processing results
+- `check_schema.py`: Validate database schema
+- `test_api_key.py`: Test Anthropic API configuration
+
+### Code Style
+
+- Backend: Follow PEP 8 Python style guide
+- Frontend: ESLint configuration included
+
+## 📝 API Documentation
+
+Once the backend server is running, API documentation is available at:
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+## 🤝 Contributing
+
+1. Create a feature branch
+2. Make your changes
+3. Ensure code follows project standards
+4. Submit a pull request
+
+## 📄 License
+
+This project is proprietary software developed for WellBank.
+
+## 🆘 Troubleshooting
+
+### Common Issues
+
+**Backend won't start:**
+- Ensure virtual environment is activated
+- Check that port 8000 is not in use
+- Verify database file exists or run `init_db.py`
+
+**Frontend connection errors:**
+- Ensure backend is running on port 8000
+- Check CORS settings in `backend/app/main.py`
+
+**AI features not working:**
+- Verify `ANTHROPIC_API_KEY` is set in `.env`
+- Test API key with `python scripts/test_api_key.py`
+
+## 📞 Support
+
+For issues or questions, please contact the development team.
 
 ---
 
-## 👤 Dataset: Anagrafiche 📄anagrafiche-synthetic.csv
-
-| Field | Description | Type | Allowed Values / Notes |
-|-------|--------------|------|------------------------|
-| **codice_cliente** | Unique customer identifier | String / ID | Primary key used to link the other datasets |
-| **cognome** | Customer’s last name | String | — |
-| **nome** | Customer’s first name | String | — |
-| **sesso** | Customer’s gender | String  (`M` / `F`) | **M** = Male, **F** = Female |
-| **data_nascita** | Customer’s date of birth | Date (YYYY-MM-DD) | — |
-| **citta_nascita** | City of birth | String | If the customer was **born in Italy**, contains the city of birth; otherwise, contains the **foreign country of birth** |
-| **provincia_nascita** | Province of birth | String (2 letters) | If the customer was **born in Italy**, contains the **vehicle registration code** of the province (e.g. “MI” for Milan); otherwise, the value is **EE** |
-| **stato_nascita** | Country of birth | String (`IT` / `EE`) | **IT** = Italy, **EE** = Foreign country |
-| **codice_fiscale** | Fiscal code of the customer | String | Synthetic identifier derived from name, surname, and date of birth |
-| **codice_attivita** | Code of the customer’s main economic activity | String | If the customer is **not employed**, the code starts with **X** (e.g. student, unemployed, retired); otherwise, it contains **4 characters** identifying the activity described in `descrizione_attivita` |
-| **descrizione_attivita** | Text description of the economic activity | String | Examples: “Shop owner”, “Bank employee”, “Retired” |
-| **posizione_attivita** | Professional position or job role | String (`OPE`, `IMP`, `QUA`, `IND`, `ALT`) | **OPE** = Worker · **IMP** = Employee · **QUA** = Executive/Manager · **IND** = Self-employed · **ALT** = Other |
-| **stato_civile** | Marital status | String (`CLNB`, `SPDV`, `VEDV`, `CONI`, `CONF`, `GESF`) | **CLNB** = Single · **SPDV** = Separated/Divorced · **VEDV** = Widowed · **CONI** = Married · **CONF** = Married with children · **GESF** = Single parent with children |
-| **segmento_economico** | Customer’s economic segment | String (`MM`, `SB`, `AF`) | **MM** = Mass Market (private clients with assets <100K €) · **SB** = Small Business (economic operators and small enterprises) · **AF** = Affluent (private clients with assets between 100K–500K €) |
-
----
-
-## 💳 Dataset: Possesso prodotti 📄possesso-prodotti-synthetic.csv
-
-| Field | Description | Type | Allowed Values / Notes |
-|-------|--------------|------|------------------------|
-| **codice_cliente** | Customer identifier | String / ID | Foreign key linked to `anagrafiche.codice_cliente` |
-| **codice_prodotto** | Unique product code | String | Identifies the type of banking product or service |
-| **descrizione** | Text description of the product | String | Examples: “Conto corrente MyEnergy”, “Contratto servizi di investimento InvestoUniq”, ... |
-| **id_rapporto** | Unique identifier of the contractual relationship | String / ID | Distinguishes multiple contracts of the same type for one customer (e.g., multiple cards or accounts) |
-
----
-
-## 💰 Dataset: Transazioni 📄movimenti-synthetic.csv
-
-| Field | Description | Type | Allowed Values / Notes |
-|-------|--------------|------|------------------------|
-| **id_transazione** | Unique transaction identifier | String / ID | Primary key |
-| **codice_cliente** | Identifier of the customer who made the transaction | String / ID | Foreign key linked to `anagrafiche.codice_cliente` |
-| **timestamp** | Transaction date and time | Datetime (ISO 8601 format: `YYYY-MM-DDTHH:MM:SS.ssssss+TZ`) | Example: `2025-07-28T16:33:13.077957+02:00` |
-| **latitudine** | Geographical latitude of the transaction | Decimal (float) | Indicates the **geographical location** where the transaction occurred |
-| **longitudine** | Geographical longitude of the transaction | Decimal (float) | Indicates the **geographical location** where the transaction occurred |
-| **macrocategoria** | Main spending category | String | Examples: “Famiglia”, “Entrate”, “Casa” |
-| **categoria** | Detailed spending category | String | Examples: “Gas & energia elettrica”, “TV, Internet, telefono”, “Trasporti, noleggi, taxi e parcheggi”, etc. |
-| **importo** | Transaction amount | Decimal (float) | Positive for inflows, negative for outflows (depending on banking context) |
-| **saldo_precedente** | Account balance **immediately before** applying the transaction | Decimal (float) | — |
-| **saldo_attuale** | Account balance **after** applying the transaction | Decimal (float) | Calculated as `saldo_precedente + transaction_amount`. |
-
-
-
----
-
-## 🔗 Relationships between datasets
-
-- `anagrafiche.codice_cliente` ←→ `possesso_prodotti.codice_cliente`  
-- `anagrafiche.codice_cliente` ←→ `transazioni.codice_cliente`
-- Each **customer** can:
-  - own **one or more products** (1:N relationship)
-  - have **one or more transactions** (1:N relationship)
-- The three datasets together enable analysis of customer segmentation and financial behavior.
-
----
+**Built with ❤️ for WellBank**

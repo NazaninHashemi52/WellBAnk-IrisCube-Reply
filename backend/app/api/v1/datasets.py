@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import csv
+import sqlite3
+import time
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime
@@ -235,9 +237,15 @@ def _sanitize_row(row: Dict[str, str], column_mapping: Dict[str, str], allowed_c
 
 
 def import_csv_job(job_id: int, dataset_type: str, table_name: str, csv_path: Path) -> None:
+    """
+    Import CSV file into database table.
+    Handles large files and database locking gracefully.
+    """
     update_job(job_id, status="running", progress=0, processed_rows=0, error=None)
 
+    # Use a timeout for database connections to prevent indefinite locks
     conn = get_conn()
+    conn.execute("PRAGMA busy_timeout = 30000")  # 30 second timeout for locked database
     try:
         allowed_cols = _table_columns(conn, table_name)
 
@@ -289,23 +297,88 @@ def import_csv_job(job_id: int, dataset_type: str, table_name: str, csv_path: Pa
             col_sql = ", ".join(insert_cols)
             sql = f"INSERT INTO {table_name} ({col_sql}) VALUES ({placeholders})"
 
+            # For holdings table, use INSERT OR IGNORE to handle foreign key violations gracefully
+            # This allows rows with invalid customer_id to be skipped instead of failing the entire import
+            if table_name == "holdings":
+                sql = sql.replace("INSERT INTO", "INSERT OR IGNORE INTO")
+            
             buf: List[tuple] = []
+            skipped_rows = 0
             for row in reader:
                 clean = _sanitize_row(row, column_mapping, allowed_cols)
+                # Skip rows with missing required fields
+                if table_name == "holdings":
+                    if not clean.get('customer_id') or not clean.get('product_code'):
+                        skipped_rows += 1
+                        continue
+                
                 buf.append(tuple(clean.get(c) for c in insert_cols))
                 processed += 1
 
                 if len(buf) >= batch_size:
-                    conn.executemany(sql, buf)
-                    conn.commit()
+                    try:
+                        conn.executemany(sql, buf)
+                        conn.commit()
+                    except sqlite3.IntegrityError as e:
+                        # Handle foreign key violations or unique constraint violations
+                        # Skip this batch and continue
+                        print(f"Warning: Skipping batch due to integrity error: {e}")
+                        skipped_rows += len(buf)
+                    except sqlite3.OperationalError as e:
+                        if "database is locked" in str(e).lower():
+                            # Wait and retry with exponential backoff
+                            max_retries = 5
+                            retry_count = 0
+                            success = False
+                            while retry_count < max_retries and not success:
+                                wait_time = 0.1 * (2 ** retry_count)  # Exponential backoff
+                                time.sleep(wait_time)
+                                try:
+                                    conn.executemany(sql, buf)
+                                    conn.commit()
+                                    success = True
+                                except sqlite3.OperationalError:
+                                    retry_count += 1
+                            if not success:
+                                print(f"Warning: Could not acquire lock after {max_retries} retries, skipping batch")
+                                skipped_rows += len(buf)
+                        else:
+                            raise
                     buf.clear()
 
                     pct = 100.0 if total_rows == 0 else min(100.0, (processed / total_rows) * 100.0)
                     update_job(job_id, processed_rows=processed, progress=pct)
 
             if buf:
-                conn.executemany(sql, buf)
-                conn.commit()
+                try:
+                    conn.executemany(sql, buf)
+                    conn.commit()
+                except sqlite3.IntegrityError as e:
+                    print(f"Warning: Skipping final batch due to integrity error: {e}")
+                    skipped_rows += len(buf)
+                except sqlite3.OperationalError as e:
+                    if "database is locked" in str(e).lower():
+                        # Wait and retry with exponential backoff
+                        max_retries = 5
+                        retry_count = 0
+                        success = False
+                        while retry_count < max_retries and not success:
+                            wait_time = 0.1 * (2 ** retry_count)  # Exponential backoff
+                            time.sleep(wait_time)
+                            try:
+                                conn.executemany(sql, buf)
+                                conn.commit()
+                                success = True
+                            except sqlite3.OperationalError:
+                                retry_count += 1
+                        if not success:
+                            print(f"Warning: Could not acquire lock after {max_retries} retries, skipping final batch")
+                            skipped_rows += len(buf)
+                    else:
+                        raise
+            
+            if skipped_rows > 0:
+                print(f"Warning: Skipped {skipped_rows} rows due to missing data or constraint violations")
 
         update_job(job_id, processed_rows=processed, progress=100.0, status="done")
 
@@ -326,71 +399,98 @@ async def upload_dataset(
     file: UploadFile = File(...),
     import_to_db: bool = Form(True, description="If true, import CSV into SQLite after upload"),
 ):
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
+    try:
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No file provided")
 
-    # Auto-detect dataset type from filename if possible
-    filename_lower = file.filename.lower()
-    detected_type = None
-    if "movimenti" in filename_lower or "transaction" in filename_lower:
-        detected_type = "movimenti"
-    elif "anagrafiche" in filename_lower or "customer" in filename_lower or "cliente" in filename_lower:
-        detected_type = "anagrafiche"
-    elif "possesso" in filename_lower or "prodotti" in filename_lower or "holdings" in filename_lower or "products" in filename_lower:
-        detected_type = "prodotti"
-    
-    # Warn if detected type differs from selected type
-    if detected_type and detected_type != dataset_type:
-        # Still use the user-selected type, but this will be logged
-        pass
+        # Auto-detect dataset type from filename if possible
+        filename_lower = file.filename.lower()
+        detected_type = None
+        if "movimenti" in filename_lower or "transaction" in filename_lower:
+            detected_type = "movimenti"
+        elif "anagrafiche" in filename_lower or "customer" in filename_lower or "cliente" in filename_lower:
+            detected_type = "anagrafiche"
+        elif "possesso" in filename_lower or "prodotti" in filename_lower or "holdings" in filename_lower or "products" in filename_lower:
+            detected_type = "prodotti"
+        
+        # Warn if detected type differs from selected type
+        if detected_type and detected_type != dataset_type:
+            # Still use the user-selected type, but this will be logged
+            pass
 
-    if dataset_type not in DATASET_TABLE_MAP:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid dataset_type. Allowed: {', '.join(DATASET_TABLE_MAP.keys())}",
+        if dataset_type not in DATASET_TABLE_MAP:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid dataset_type. Allowed: {', '.join(DATASET_TABLE_MAP.keys())}",
+            )
+
+        # create type-specific subfolder
+        target_dir = UPLOAD_ROOT / dataset_type
+        target_dir.mkdir(parents=True, exist_ok=True)
+
+        target_path = target_dir / Path(file.filename).name
+
+        # Remove old versions of this file from ALL dataset type directories (keep only latest)
+        filename = Path(file.filename).name
+        for dataset_type_dir in UPLOAD_ROOT.iterdir():
+            if dataset_type_dir.is_dir():
+                old_file_path = dataset_type_dir / filename
+                if old_file_path.exists() and old_file_path != target_path:
+                    old_file_path.unlink()
+
+        # save file in chunks
+        try:
+            with target_path.open("wb") as buffer:
+                bytes_written = 0
+                while True:
+                    chunk = await file.read(1024 * 1024)  # Read 1MB at a time
+                    if not chunk:
+                        break
+                    buffer.write(chunk)
+                    bytes_written += len(chunk)
+                    # For very large files, log progress
+                    if bytes_written % (10 * 1024 * 1024) == 0:  # Every 10MB
+                        print(f"Uploading {file.filename}: {bytes_written / (1024*1024):.1f} MB written")
+        except Exception as e:
+            # Clean up partial file on error
+            if target_path.exists():
+                target_path.unlink()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to save file: {str(e)}"
+            )
+
+        # create upload job for progress
+        job_id = create_job(dataset_type=dataset_type, filename=target_path.name)
+
+        if import_to_db:
+            table_name = DATASET_TABLE_MAP[dataset_type]
+            background.add_task(import_csv_job, job_id, dataset_type, table_name, target_path)
+        else:
+            update_job(job_id, status="done", progress=100.0)
+
+        return JSONResponse(
+            {
+                "message": "File uploaded successfully",
+                "dataset_type": dataset_type,
+                "filename": target_path.name,
+                "path": str(target_path),
+                "job_id": job_id,
+                "status": "queued" if import_to_db else "done",
+            }
         )
-
-    # create type-specific subfolder
-    target_dir = UPLOAD_ROOT / dataset_type
-    target_dir.mkdir(parents=True, exist_ok=True)
-
-    target_path = target_dir / Path(file.filename).name
-
-    # Remove old versions of this file from ALL dataset type directories (keep only latest)
-    filename = Path(file.filename).name
-    for dataset_type_dir in UPLOAD_ROOT.iterdir():
-        if dataset_type_dir.is_dir():
-            old_file_path = dataset_type_dir / filename
-            if old_file_path.exists() and old_file_path != target_path:
-                old_file_path.unlink()
-
-    # save file in chunks
-    with target_path.open("wb") as buffer:
-        while True:
-            chunk = await file.read(1024 * 1024)
-            if not chunk:
-                break
-            buffer.write(chunk)
-
-    # create upload job for progress
-    job_id = create_job(dataset_type=dataset_type, filename=target_path.name)
-
-    if import_to_db:
-        table_name = DATASET_TABLE_MAP[dataset_type]
-        background.add_task(import_csv_job, job_id, dataset_type, table_name, target_path)
-    else:
-        update_job(job_id, status="done", progress=100.0)
-
-    return JSONResponse(
-        {
-            "message": "File uploaded successfully",
-            "dataset_type": dataset_type,
-            "filename": target_path.name,
-            "path": str(target_path),
-            "job_id": job_id,
-            "status": "queued" if import_to_db else "done",
-        }
-    )
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        # Log the error for debugging
+        import traceback
+        print(f"Error in upload_dataset: {e}")
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=500,
+            detail=f"File upload failed: {str(e)}"
+        )
 
 
 @router.get("/datasets/jobs/{job_id}")

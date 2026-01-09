@@ -11,8 +11,14 @@ export default function LoginPage({ onNavigate, onLogin, onBack }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (email && password) {
-      if (onLogin) onLogin({ email, role: "advisor" });
-      if (onNavigate) onNavigate("employee");
+      // Only call onLogin - it will handle navigation internally
+      // Don't call onNavigate separately as it can cause conflicts
+      if (onLogin) {
+        onLogin();
+      } else if (onNavigate) {
+        // Fallback if onLogin is not provided
+        onNavigate("employee");
+      }
     }
   };
 

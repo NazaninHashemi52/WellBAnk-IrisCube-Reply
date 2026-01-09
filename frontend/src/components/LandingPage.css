@@ -9,14 +9,10 @@
     overflow-y: auto;
     position: relative;
     background: linear-gradient(135deg, #F7F9FC 0%, #E8F0F5 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Public Sans', sans-serif;
     font-size: 16px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    padding: 20px;
   }
   
   /* --- ORBS (Background layer) - Nebula White Theme --- */
@@ -61,7 +57,6 @@
   .wbl-bg {
     position: relative;
     width: 100%;
-    max-width: 1440px;
     min-height: 100vh;
     z-index: 1;
     overflow: visible;
@@ -74,14 +69,16 @@
   }
   
   .wbl-bg-img {
-    position: absolute;
+    position: fixed;
     inset: 0;
     background-size: cover;
     background-position: center;
+    background-attachment: fixed;
     z-index: 0;
     opacity: 0.5;
     pointer-events: none;
-    border-radius: 32px;
+    width: 100vw;
+    height: 100vh;
   }
   
   /* --- NAVIGATION & LOGIN BUTTON --- */
@@ -92,7 +89,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 0;
+    padding: 20px 48px;
     margin-bottom: 40px;
   }
   
@@ -101,6 +98,19 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    max-width: 100%;
+  }
+  
+  @media (max-width: 768px) {
+    .wbl-nav-overlay {
+      padding: 20px 32px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .wbl-nav-overlay {
+      padding: 20px 24px;
+    }
   }
 
   .wbl-logo-text {
@@ -154,6 +164,19 @@
     flex-direction: column;
     gap: 24px;
     max-width: 800px;
+    padding: 0 48px;
+  }
+  
+  @media (max-width: 768px) {
+    .wbl-hero-content {
+      padding: 0 32px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .wbl-hero-content {
+      padding: 0 24px;
+    }
   }
 
   .wbl-hero-badge {
@@ -330,7 +353,7 @@
   .wbl-features-section {
     position: relative;
     z-index: 5;
-    margin-top: -100px;
+    margin-top: -60px; /* Pushed down by ~40px (1cm total) from original -100px */
   }
 
   .wbl-section-header {
@@ -364,18 +387,29 @@
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 32px;
     width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
+    padding: 0 48px;
+  }
+  
+  @media (max-width: 768px) {
+    .wbl-services-grid {
+      padding: 0 32px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .wbl-services-grid {
+      padding: 0 24px;
+    }
   }
   
   /* --- SERVICE CARDS --- */
   .wbl-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(6, 182, 212, 0.1);
     padding: 20px;
-    border-radius: 16px;
+    border-radius: 24px;
     transition: all 0.3s ease;
     cursor: pointer;
     overflow: hidden;

@@ -97,7 +97,12 @@ def compute_services_summary() -> list[dict]:
     Output fits the UI cards.
     """
 
-    possesso_csv = UPLOADS_DIR / "possesso" / "possesso-prodotti-synthetic.csv"
+    # Try multiple possible paths for flexibility
+    possesso_csv = (
+        UPLOADS_DIR / "prodotti" / "possesso-prodotti-synthetic.csv"  # Actual location
+        if (UPLOADS_DIR / "prodotti" / "possesso-prodotti-synthetic.csv").exists()
+        else UPLOADS_DIR / "possesso" / "possesso-prodotti-synthetic.csv"  # Alternative
+    )
     movimenti_csv = UPLOADS_DIR / "movimenti" / "movimenti-synthetic.csv"
 
     # If you uploaded with different names, update these paths.
