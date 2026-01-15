@@ -9,7 +9,6 @@ import {
   Plus,
   X,
   Shield,
-  ShieldCheck,
   CheckCircle2,
   Sparkles,
   FileText,
@@ -18,9 +17,6 @@ import {
   TrendingUp,
   Lightbulb,
   Info,
-  Target,
-  Crown,
-  Rocket,
 } from "lucide-react";
 
 // The Sanitizer - High-Trust Name Cleaning
@@ -58,52 +54,16 @@ const formatCustomerName = sanitizeCustomerName;
 const formatProductName = (rawProduct) => {
   if (!rawProduct) return "questo servizio";
   
-  // Professional product name mapping - Comprehensive catalog (aligned with backend)
+  // Professional product name mapping
   const productNameMap = {
-    // Credit Cards
-    "CACR432": "AureaCard Exclusive",
-    "CACR748": "AureaCard Infinity",
-    "CADB439": "ZynaFlow Plus Debit",
-    "CADB783": "EasyYoung Pay",
-    "CAPR574": "FlexPay One Prepaid",
-    
-    // Accounts
-    "CCOR602": "MyEnergy Checking Account",
     "BASIC_CHECKING": "Daily Flow Account",
-    "BUSINESS_ACCOUNT": "Business Prime Account",
-    "MYENERGY": "MyEnergy Digital Account",
-    
-    // Investments
-    "CINV819": "SharesVault Investment",
-    "FPEN541": "FutureSecure Pension Fund",
     "PREMIUM_INVESTMENT": "Premium Investment Portfolio",
-    "SINV263": "PlannerPro Advisory",
-    
-    // Savings & Deposits
-    "DPAM682": "WealthPlus Managed Deposit",
-    "DPAM997": "SafeHarbor Premium Deposit",
-    "DPRI866": "SaveSmart Goal Account",
-    "DPAM234": "SaveSmart Goal Account",
-    "DPAM891": "FutureSecure Pension Fund",
-    
-    // Credit & Loans
-    "CRDT356": "FlexiCredit Line",
-    "MTUU356": "DreamHome Mortgage",
-    "PRST234": "QuickCash Personal Loan",
+    "WEALTH_MANAGEMENT": "Wealth Management Service",
     "REWARDS_CREDIT": "Rewards Credit Card",
     "PERSONAL_LOAN": "Personal Loan",
-    "MORTGAGE": "DreamHome Mortgage",
-    "QUICKCASH": "QuickCash Personal Loan",
-    
-    // Insurance
-    "ASSA566": "SalusCare Health Insurance",
-    
-    // Packages
-    "PRPE771": "Premium Business+ Package",
-    "PRPE234": "LifeStyle Premium Package",
-    "PRPE567": "SmartPark Urban Services",
-    "WEALTH_MANAGEMENT": "Wealth Management Service",
     "SAVINGS_PLAN": "Savings Plan",
+    "BUSINESS_ACCOUNT": "Business Account",
+    "MORTGAGE": "Mortgage Loan",
   };
   
   // Check if we have a professional name
@@ -126,13 +86,6 @@ export default function AIMessageComposer({
   clusterLabel = "",
   clusterId = null,
   aiReasoning = null, // AI reasoning from ProductRecommendationEngine
-  customerProfession = null, // Customer profession
-  customerSegment = null, // Customer segment (e.g., "Small Business")
-  customerRegion = null, // Customer region/location
-  customerAge = null, // Customer age
-  customerGender = null, // Customer gender
-  customerRecommendations = [], // All recommendations for this customer
-  onProductChange = null, // Callback when product is changed
   onSend,
   onSave,
 }) {
@@ -140,25 +93,11 @@ export default function AIMessageComposer({
   const [tone, setTone] = useState("growth"); // Smart tone: growth, security, concierge
   const [draft, setDraft] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false); // For streaming effect
-  const [streamedText, setStreamedText] = useState(""); // For streaming effect
   const [aiInsights, setAiInsights] = useState(null); // AI reasoning insights
-  const [selectedProductId, setSelectedProductId] = useState(null); // Currently selected product recommendation ID
-  const [isSwitchingProduct, setIsSwitchingProduct] = useState(false); // Loading state when switching products
-  const [currentProductData, setCurrentProductData] = useState(null); // Current product's data (acceptance, revenue, etc.)
-  const [personalizedVars, setPersonalizedVars] = useState({
-    name: customerName,
-    profession: customerProfession,
-    segment: customerSegment,
-    region: customerRegion,
-  }); // Editable personalized variables
   
   // Nomi puliti per l'uso nel componente
   const cleanCustomerName = formatCustomerName(customerName);
-  // Use currentProductData if available, otherwise fall back to props
-  const effectiveProductCode = currentProductData?.product_code || productCode;
-  const effectiveProductName = currentProductData?.product_name || productName || productCode;
-  const cleanProductName = formatProductName(effectiveProductName || effectiveProductCode);
+  const cleanProductName = formatProductName(productName || productCode);
   // System Examples - Advanced Banking Services
   const systemExamples = [
     // Life-Stage & Predictive Nudges
@@ -249,15 +188,15 @@ export default function AIMessageComposer({
       description: "Visionary and ambitious",
       keywords: ["opportunity", "legacy", "future", "potential", "growth"],
       icon: TrendingUp,
-      color: "#34d399", // emerald-400 (text-emerald-400)
+      color: "#10b981",
       suitableFor: ["Investments", "Loans", "Wealth Management"],
     },
     security: {
       name: "Secure/Protective",
       description: "Reassuring and stable",
       keywords: ["peace of mind", "safeguard", "stability", "protection", "secure"],
-      icon: ShieldCheck,
-      color: "#60a5fa", // blue-400 (text-blue-400)
+      icon: Shield,
+      color: "#3b82f6",
       suitableFor: ["Savings", "Insurance", "Accounts"],
     },
     concierge: {
@@ -265,7 +204,7 @@ export default function AIMessageComposer({
       description: "Exclusive and dedicated",
       keywords: ["exclusive", "priority", "bespoke", "tailored", "dedicated"],
       icon: Sparkles,
-      color: "#fbbf24", // amber-400 (text-amber-400)
+      color: "#8b5cf6",
       suitableFor: ["Wealth Management", "Premium Investment", "Business Account"],
     },
   };
@@ -277,14 +216,10 @@ export default function AIMessageComposer({
     urgent: { name: "Urgent" },
   };
 
-  // Generate explanation using few-shot prompting with streaming effect
+  // Generate explanation using few-shot prompting
   // Uses examples as few-shot prompts to explain why customer suits the service
-  async function generateDraft(useStreaming = true) {
+  async function generateDraft() {
     setIsGenerating(true);
-    if (useStreaming) {
-      setIsStreaming(true);
-      setStreamedText("");
-    }
     try {
       // Simulate API call - in production, this would call your FastAPI backend
       // The backend would receive:
@@ -399,17 +334,6 @@ export default function AIMessageComposer({
         }
         
         // Build professional message with advisor as hero
-        // Include context-aware personalization (Profession, Region)
-        const professionContext = personalizedVars.profession 
-          ? `Given your work in ${personalizedVars.profession}, `
-          : "";
-        const regionContext = personalizedVars.region 
-          ? `serving the ${personalizedVars.region} community, `
-          : "";
-        const segmentContext = personalizedVars.segment 
-          ? `As a ${personalizedVars.segment} client, `
-          : "";
-        
         // Include AI reasoning if available
         const aiReasoningText = aiSituation 
           ? `\n\nBased on our analysis: ${aiSituation}`
@@ -419,12 +343,9 @@ export default function AIMessageComposer({
           ? `\n\nKey benefits:\n${aiKeyBenefits.slice(0, 3).map(b => `• ${b}`).join('\n')}`
           : "";
         
-        // Context-aware message with profession and region
-        const contextIntro = professionContext || regionContext || segmentContext || "";
-        
-        explanation = `${greeting} ${personalizedVars.name || cleanCustomerName},
+        explanation = `${greeting} ${cleanCustomerName},
 
-${contextIntro}I was reviewing your portfolio and noticed that ${valueProp.toLowerCase()}.${aiReasoningText}${keyBenefitsText}
+I was reviewing your portfolio and noticed that ${valueProp.toLowerCase()}.${aiReasoningText}${keyBenefitsText}
 
 ${cta}
 
@@ -444,14 +365,13 @@ WellBank Team`;
       
       // Determine AI insights based on tone strategy and customer data
       const toneStrategy = TONE_STRATEGIES[tone] || TONE_STRATEGIES.growth;
-      const currentProductDisplayName = formatProductName(effectiveProductName || effectiveProductCode || productName || productCode);
       const insights = {
         toneReason: `Selected "${toneStrategy.name}" tone because: ${toneStrategy.description}`,
         customerFit: clusterLabel 
           ? `Customer belongs to "${clusterLabel}" segment, indicating ${clusterLabel.toLowerCase().includes("high") ? "premium" : "standard"} service expectations`
           : "Customer profile suggests personalized approach",
-        productMatch: currentProductDisplayName 
-          ? `${currentProductDisplayName} aligns with ${toneStrategy.suitableFor.join(", ")} category preferences`
+        productMatch: productName 
+          ? `${productName} aligns with ${toneStrategy.suitableFor.join(", ")} category preferences`
           : "Product category matches tone strategy",
         strategy: relevantExample?.category 
           ? `Using ${relevantExample.category} reasoning pattern from examples`
@@ -459,71 +379,19 @@ WellBank Team`;
       };
       setAiInsights(insights);
       
-      // Apply streaming effect if enabled
-      if (useStreaming && isStreaming) {
-        setStreamedText("");
-        setDraft("");
-        // Simulate streaming by adding text character by character
-        for (let i = 0; i <= explanation.length; i++) {
-          await new Promise(resolve => setTimeout(resolve, 10)); // 10ms per character
-          const partialText = explanation.slice(0, i);
-          setStreamedText(partialText);
-          setDraft(partialText);
-          checkCompliance(partialText);
-        }
-        setIsStreaming(false);
-      } else {
-        setDraft(explanation);
-      }
+      setDraft(explanation);
       setOriginalDraft(explanation); // Store original for comparison
       checkCompliance(explanation);
     } catch (err) {
       console.error("Failed to generate explanation:", err);
       // Safe fallback
-      const fallbackExplanation = `${personalizedVars.name || customerName || "This customer"} is recommended for ${productName || productCode || "this service"} based on their financial profile and behavioral patterns.`;
+      const fallbackExplanation = `${customerName || "This customer"} is recommended for ${productName || productCode || "this service"} based on their financial profile and behavioral patterns.`;
       setDraft(fallbackExplanation);
       checkCompliance(fallbackExplanation);
     } finally {
       setIsGenerating(false);
-      setIsStreaming(false);
     }
   }
-
-  // Get product type for compliance disclaimers
-  const getProductType = () => {
-    const productLower = (productName || productCode || "").toLowerCase();
-    if (productLower.includes("loan") || productLower.includes("credit") || productLower.includes("mortgage")) {
-      return "loan";
-    } else if (productLower.includes("investment") || productLower.includes("portfolio") || productLower.includes("fund")) {
-      return "investment";
-    } else if (productLower.includes("insurance")) {
-      return "insurance";
-    }
-    return "general";
-  };
-
-  // Get appropriate disclaimer text based on product type
-  const getDisclaimerText = (productType) => {
-    switch (productType) {
-      case "loan":
-        return "\n\nPlease note: Terms and conditions apply. Annual Percentage Rate (APR) and repayment terms are subject to credit approval. Please review the loan agreement carefully before accepting.";
-      case "investment":
-        return "\n\nPlease note: Investments carry risk and the value of your investment may go down as well as up. Past performance is not indicative of future results. Please review the product documentation and risk assessment before proceeding.";
-      case "insurance":
-        return "\n\nPlease note: Terms and conditions apply. Coverage is subject to policy terms and exclusions. Please review the policy documentation carefully before accepting.";
-      default:
-        return "\n\nPlease note: Terms and conditions apply. Please review the product documentation carefully before proceeding.";
-    }
-  };
-
-  // Insert disclaimer into message
-  const insertDisclaimer = () => {
-    const productType = getProductType();
-    const disclaimerText = getDisclaimerText(productType);
-    const newDraft = draft + disclaimerText;
-    setDraft(newDraft);
-    checkCompliance(newDraft);
-  };
 
   // Enhanced compliance check with prohibited words detection
   function checkCompliance(text) {
@@ -548,9 +416,7 @@ WellBank Team`;
     const hasDisclaimer = textLower.includes("terms") || 
                          textLower.includes("conditions") ||
                          textLower.includes("subject to") ||
-                         textLower.includes("please review") ||
-                         textLower.includes("apr") ||
-                         textLower.includes("annual percentage rate");
+                         textLower.includes("please review");
     
     // Warnings
     const warnings = [];
@@ -567,8 +433,6 @@ WellBank Team`;
         message: `Compliance violation: Prohibited words detected`,
         warnings: warnings,
         prohibitedWords: foundProhibited,
-        needsDisclaimer: !hasDisclaimer,
-        productType: getProductType(),
       });
     } else if (!hasDisclaimer) {
       setComplianceStatus({
@@ -576,8 +440,6 @@ WellBank Team`;
         message: "AI Draft: Please ensure this aligns with the customer's latest risk profile",
         warnings: warnings,
         prohibitedWords: [],
-        needsDisclaimer: true,
-        productType: getProductType(),
       });
     } else {
       setComplianceStatus({
@@ -585,8 +447,6 @@ WellBank Team`;
         message: "Compliance check passed - includes required disclaimers",
         warnings: warnings,
         prohibitedWords: [],
-        needsDisclaimer: false,
-        productType: getProductType(),
       });
     }
   }
@@ -610,7 +470,7 @@ WellBank Team`;
     setExamples((prevExamples) => (prevExamples || []).filter(e => e && e.id !== id));
   }
 
-  // Apply tone preset - instantly regenerate message
+  // Apply tone preset
   function handleToneChange(newTone) {
     setTone(newTone);
     // Filter system examples by tone and add if not present
@@ -625,11 +485,6 @@ WellBank Team`;
     });
     
     setExamples(newExamples);
-    
-    // Instantly regenerate message with new tone
-    if (draft || (customerName || customerId) && (productName || productCode)) {
-      generateDraft(true); // Use streaming for instant feedback
-    }
   }
 
   // Reset to system examples
@@ -637,72 +492,14 @@ WellBank Team`;
     setExamples(systemExamples);
   }
 
-  // Initialize selected product from props
-  useEffect(() => {
-    if (customerRecommendations.length > 0) {
-      // Find the product that matches current productCode, or select the first one
-      const matchingProduct = customerRecommendations.find(r => r.product_code === productCode) || customerRecommendations[0];
-      if (matchingProduct) {
-        setSelectedProductId(matchingProduct.id);
-        setCurrentProductData({
-          acceptance_probability: matchingProduct.acceptance_probability,
-          expected_revenue: matchingProduct.expected_revenue,
-          product_code: matchingProduct.product_code,
-          product_name: matchingProduct.product_name,
-          narrative: matchingProduct.narrative,
-        });
-      }
-    } else if (productCode) {
-      // Fallback to props if no recommendations array
-      setCurrentProductData({
-        acceptance_probability: null,
-        expected_revenue: null,
-        product_code: productCode,
-        product_name: productName,
-        narrative: null,
-      });
-    }
-  }, [customerRecommendations, productCode, productName]);
-
-  // Handle product switching
-  const handleProductSelect = async (recommendation) => {
-    setIsSwitchingProduct(true);
-    setSelectedProductId(recommendation.id);
-    setCurrentProductData({
-      acceptance_probability: recommendation.acceptance_probability,
-      expected_revenue: recommendation.expected_revenue,
-      product_code: recommendation.product_code,
-      product_name: recommendation.product_name,
-      narrative: recommendation.narrative,
-    });
-    
-    // Call callback if provided
-    if (onProductChange) {
-      onProductChange(recommendation);
-    }
-    
-    // Regenerate message with new product (after a brief delay to show loading)
-    setTimeout(async () => {
-      try {
-        // Update the product context and regenerate
-        await generateDraft(true); // Use streaming
-      } catch (err) {
-        console.error("Error regenerating message for new product:", err);
-      } finally {
-        setIsSwitchingProduct(false);
-      }
-    }, 500); // 500ms delay to show loading skeleton
-  };
-
   // Initialize draft on mount or when dependencies change
   useEffect(() => {
     // Only generate if we have at least customer name or product info
-    const effectiveProductCode = currentProductData?.product_code || productCode;
-    if ((customerName || customerId) && effectiveProductCode) {
+    if ((customerName || customerId) && (productName || productCode)) {
       // Use setTimeout to avoid calling during render
       const timer = setTimeout(() => {
         try {
-          generateDraft(true); // Use streaming for initial generation
+          generateDraft();
         } catch (err) {
           console.error("Error in generateDraft from useEffect:", err);
         }
@@ -710,7 +507,7 @@ WellBank Team`;
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customerName, customerId, currentProductData?.product_code, productCode]); // Use currentProductData.product_code instead of productCode
+  }, [customerName, customerId, productName, productCode, tone]); // Removed 'examples' to prevent infinite loop
 
   // Check if draft was significantly edited (for feedback loop)
   const isDraftSignificantlyEdited = () => {
@@ -861,197 +658,6 @@ WellBank Team`;
             AI Insights
           </div>
           
-          {/* Service Tabs Component - Prominent at Top */}
-          {customerRecommendations.length > 0 && (
-            <div style={{
-              marginBottom: "20px",
-            }}>
-              <div style={{
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "rgba(148, 163, 184, 0.8)",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                marginBottom: "12px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}>
-                <Target size={14} />
-                Select Service ({customerRecommendations.length} available)
-              </div>
-              <div style={{
-                display: "flex",
-                gap: "8px",
-                flexWrap: "wrap",
-                marginBottom: "16px",
-              }}>
-                {customerRecommendations.map((rec, index) => {
-                  const isSelected = selectedProductId === rec.id;
-                  const prob = rec.acceptance_probability || 0;
-                  const revenue = rec.expected_revenue || 0;
-                  const serviceName = formatProductName(rec.product_name || rec.product_code);
-                  
-                  return (
-                    <button
-                      key={rec.id}
-                      onClick={() => handleProductSelect(rec)}
-                      disabled={isSwitchingProduct}
-                      style={{
-                        padding: "12px 16px",
-                        background: isSelected
-                          ? `linear-gradient(135deg, rgba(79, 216, 235, 0.3), rgba(59, 130, 246, 0.2))`
-                          : "rgba(255, 255, 255, 0.05)",
-                        border: `2px solid ${isSelected 
-                          ? "#4fd8eb" 
-                          : "rgba(255, 255, 255, 0.1)"}`,
-                        borderRadius: "12px",
-                        color: isSelected ? "#4fd8eb" : "#94A3B8",
-                        fontSize: "13px",
-                        fontWeight: isSelected ? 700 : 500,
-                        cursor: isSwitchingProduct ? "wait" : "pointer",
-                        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "flex-start",
-                        gap: "6px",
-                        minWidth: "160px",
-                        position: "relative",
-                        boxShadow: isSelected 
-                          ? "0 0 24px rgba(79, 216, 235, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3)"
-                          : "0 2px 4px rgba(0, 0, 0, 0.1)",
-                        transform: isSelected ? "translateY(-2px)" : "translateY(0)",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected && !isSwitchingProduct) {
-                          e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
-                          e.currentTarget.style.borderColor = "rgba(79, 216, 235, 0.4)";
-                          e.currentTarget.style.transform = "translateY(-1px)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-                          e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.1)";
-                          e.currentTarget.style.transform = "translateY(0)";
-                        }
-                      }}
-                    >
-                      <div style={{ 
-                        fontWeight: isSelected ? 700 : 600, 
-                        fontSize: "14px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        width: "100%",
-                      }}>
-                        {serviceName}
-                        {isSelected && (
-                          <div style={{
-                            marginLeft: "auto",
-                            width: "10px",
-                            height: "10px",
-                            borderRadius: "50%",
-                            background: "#4fd8eb",
-                            boxShadow: "0 0 12px rgba(79, 216, 235, 1)",
-                            animation: "pulse 2s ease-in-out infinite",
-                          }} />
-                        )}
-                      </div>
-                      <div style={{ 
-                        fontSize: "11px", 
-                        opacity: 0.9,
-                        display: "flex",
-                        gap: "10px",
-                        width: "100%",
-                        alignItems: "center",
-                      }}>
-                        <span style={{ 
-                          color: prob >= 0.7 ? "#10b981" : prob >= 0.5 ? "#f59e0b" : "#ef4444",
-                          fontWeight: 600,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}>
-                          <span>{(prob * 100).toFixed(0)}%</span>
-                          <span style={{ opacity: 0.7 }}>Match</span>
-                        </span>
-                        <span style={{ 
-                          color: "#4fd8eb", 
-                          fontWeight: 600,
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}>
-                          <span>€{(revenue / 1000).toFixed(1)}K</span>
-                          <span style={{ opacity: 0.7, fontSize: "10px" }}>Revenue</span>
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-          
-          {/* Current Product Stats - Always show when a product is selected */}
-          {currentProductData && customerRecommendations.length > 0 && (
-            <div style={{
-              padding: "12px",
-              background: "rgba(79, 216, 235, 0.1)",
-              border: "1px solid rgba(79, 216, 235, 0.2)",
-              borderRadius: "10px",
-              marginBottom: "16px",
-            }}>
-              <div style={{
-                fontSize: "11px",
-                fontWeight: 600,
-                color: "#4fd8eb",
-                marginBottom: "8px",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-              }}>
-                Current Selection: {formatProductName(currentProductData.product_name || currentProductData.product_code)}
-              </div>
-              <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "12px",
-              }}>
-                <div>
-                  <div style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)", marginBottom: "4px" }}>
-                    Match Score
-                  </div>
-                  <div style={{ 
-                    fontSize: "18px", 
-                    fontWeight: 700,
-                    color: currentProductData.acceptance_probability >= 0.7 
-                      ? "#10b981" 
-                      : currentProductData.acceptance_probability >= 0.5 
-                      ? "#f59e0b" 
-                      : "#ef4444",
-                  }}>
-                    {(currentProductData.acceptance_probability * 100).toFixed(0)}%
-                  </div>
-                </div>
-                <div style={{ width: "1px", height: "30px", background: "rgba(255, 255, 255, 0.1)" }} />
-                <div>
-                  <div style={{ fontSize: "12px", color: "rgba(255, 255, 255, 0.7)", marginBottom: "4px" }}>
-                    Estimated Revenue
-                  </div>
-                  <div style={{ 
-                    fontSize: "18px", 
-                    fontWeight: 700,
-                    color: "#4fd8eb",
-                  }}>
-                    €{(currentProductData.expected_revenue / 1000).toFixed(1)}K
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
           {/* Smart Tone Toggles */}
           <div>
             <div style={{
@@ -1076,7 +682,8 @@ WellBank Team`;
                   <button
                     key={key}
                     onClick={() => {
-                      handleToneChange(key);
+                      setTone(key);
+                      if (draft) generateDraft();
                     }}
                     style={{
                       padding: "12px 16px",
@@ -1108,45 +715,7 @@ WellBank Team`;
                       }
                     }}
                   >
-                    {/* Icon Container - Circle with Neon Glow Effect */}
-                    <div style={{
-                      width: "48px",
-                      height: "48px",
-                      borderRadius: "50%",
-                      background: isActive
-                        ? `rgba(${strategy.color === "#34d399" ? "52, 211, 153" : strategy.color === "#60a5fa" ? "96, 165, 250" : "251, 191, 36"}, 0.1)`
-                        : "rgba(255, 255, 255, 0.05)",
-                      border: `2px solid ${isActive ? strategy.color + "40" : "rgba(255, 255, 255, 0.1)"}`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      flexShrink: 0,
-                      position: "relative",
-                      boxShadow: isActive
-                        ? `0 0 16px ${strategy.color}40, inset 0 0 8px ${strategy.color}20`
-                        : "none",
-                      animation: isActive ? "pulse 2s ease-in-out infinite" : "none",
-                    }}>
-                      <Icon 
-                        size={20} 
-                        style={{ 
-                          color: isActive ? strategy.color : "#94A3B8",
-                          filter: isActive ? `drop-shadow(0 0 6px ${strategy.color}80)` : "none",
-                        }} 
-                      />
-                      {/* Pulse ring effect when active */}
-                      {isActive && (
-                        <div style={{
-                          position: "absolute",
-                          width: "100%",
-                          height: "100%",
-                          borderRadius: "50%",
-                          border: `2px solid ${strategy.color}`,
-                          opacity: 0.3,
-                          animation: "pulse-ring 2s ease-in-out infinite",
-                        }} />
-                      )}
-                    </div>
+                    <Icon size={18} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, marginBottom: "2px" }}>
                         {strategy.name}
@@ -1267,45 +836,6 @@ WellBank Team`;
                   ))}
                 </div>
               )}
-              {/* Proactive Compliance Disclaimer Button */}
-              {complianceStatus.needsDisclaimer && (
-                <button
-                  onClick={insertDisclaimer}
-                  style={{
-                    marginTop: "12px",
-                    padding: "8px 16px",
-                    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                    border: "none",
-                    borderRadius: "8px",
-                    color: "white",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    width: "100%",
-                    justifyContent: "center",
-                    transition: "all 0.2s",
-                    boxShadow: "0 2px 8px rgba(59, 130, 246, 0.3)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-1px)";
-                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.4)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(59, 130, 246, 0.3)";
-                  }}
-                >
-                  <FileText size={14} />
-                  {complianceStatus.productType === "loan" 
-                    ? "Insert APR & Terms Disclaimer"
-                    : complianceStatus.productType === "investment"
-                    ? "Insert Investment Risk Disclaimer"
-                    : "Insert Legal Disclaimers"}
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -1378,118 +908,42 @@ WellBank Team`;
             </button>
           </div>
 
-          {/* Personalized Variables - Data Chips with Live Editing */}
+          {/* Variable Injection Info - Con evidenziazione delle variabili pulite */}
           <div style={{
-            padding: "12px 16px",
+            padding: "10px 14px",
             background: "rgba(79, 216, 235, 0.1)",
             border: "1px solid rgba(79, 216, 235, 0.2)",
             borderRadius: "10px",
             fontSize: "12px",
             color: "#4fd8eb",
           }}>
-            <div style={{ marginBottom: "8px", fontWeight: 600 }}>
+            <div style={{ marginBottom: "6px" }}>
               <strong>Personalized Variables:</strong>
             </div>
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {/* Name Chip - Editable */}
-              <div style={{
-                padding: "6px 10px",
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              <span style={{
+                padding: "4px 8px",
                 background: "rgba(79, 216, 235, 0.2)",
-                borderRadius: "8px",
-                border: "1px solid rgba(79, 216, 235, 0.3)",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}>
-                <span style={{ fontSize: "11px", opacity: 0.8 }}>Name:</span>
-                <input
-                  type="text"
-                  value={personalizedVars.name || cleanCustomerName}
-                  onChange={(e) => {
-                    const newVars = { ...personalizedVars, name: e.target.value };
-                    setPersonalizedVars(newVars);
-                    // Update draft with new name
-                    const oldName = personalizedVars.name || cleanCustomerName;
-                    const updatedDraft = draft.replace(new RegExp(oldName, 'g'), e.target.value);
-                    setDraft(updatedDraft);
-                  }}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: "#4fd8eb",
-                    fontWeight: 600,
-                    fontSize: "12px",
-                    minWidth: "100px",
-                    outline: "none",
-                  }}
-                />
-              </div>
-              
-              {/* Profession Chip */}
-              {personalizedVars.profession && (
-                <div style={{
-                  padding: "6px 10px",
-                  background: "rgba(16, 185, 129, 0.2)",
-                  borderRadius: "8px",
-                  border: "1px solid rgba(16, 185, 129, 0.3)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}>
-                  <span style={{ fontSize: "11px", opacity: 0.8 }}>Profession:</span>
-                  <strong style={{ color: "#10b981" }}>{personalizedVars.profession}</strong>
-                </div>
-              )}
-              
-              {/* Segment Chip */}
-              {personalizedVars.segment && (
-                <div style={{
-                  padding: "6px 10px",
-                  background: "rgba(139, 92, 246, 0.2)",
-                  borderRadius: "8px",
-                  border: "1px solid rgba(139, 92, 246, 0.3)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}>
-                  <span style={{ fontSize: "11px", opacity: 0.8 }}>Segment:</span>
-                  <strong style={{ color: "#8b5cf6" }}>{personalizedVars.segment}</strong>
-                </div>
-              )}
-              
-              {/* Region Chip */}
-              {personalizedVars.region && (
-                <div style={{
-                  padding: "6px 10px",
-                  background: "rgba(245, 158, 11, 0.2)",
-                  borderRadius: "8px",
-                  border: "1px solid rgba(245, 158, 11, 0.3)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}>
-                  <span style={{ fontSize: "11px", opacity: 0.8 }}>Region:</span>
-                  <strong style={{ color: "#f59e0b" }}>{personalizedVars.region}</strong>
-                </div>
-              )}
-              
-              {/* Product Chip */}
-              <div style={{
-                padding: "6px 10px",
-                background: "rgba(79, 216, 235, 0.2)",
-                borderRadius: "8px",
+                borderRadius: "6px",
                 border: "1px solid rgba(79, 216, 235, 0.3)",
               }}>
-                <span style={{ fontSize: "11px", opacity: 0.8 }}>Product:</span>
-                <strong style={{ color: "#4fd8eb", marginLeft: "6px" }}>{cleanProductName}</strong>
-              </div>
+                Name: <strong style={{ color: "#4fd8eb" }}>{cleanCustomerName}</strong>
+              </span>
+              <span style={{
+                padding: "4px 8px",
+                background: "rgba(79, 216, 235, 0.2)",
+                borderRadius: "6px",
+                border: "1px solid rgba(79, 216, 235, 0.3)",
+              }}>
+                Product: <strong style={{ color: "#4fd8eb" }}>{cleanProductName}</strong>
+              </span>
             </div>
           </div>
 
           {/* Draft Preview - Live Preview of glassmorphic card customer will see */}
           <div style={{ position: "relative" }}>
             {/* Live Preview Label */}
-            {draft && !isSwitchingProduct && (
+            {draft && (
               <div style={{
                 fontSize: "11px",
                 fontWeight: 600,
@@ -1506,45 +960,7 @@ WellBank Team`;
               </div>
             )}
             
-            {/* Loading Skeleton when switching products */}
-            {isSwitchingProduct && (
-              <div style={{
-                padding: "16px",
-                background: "rgba(255, 255, 255, 0.05)",
-                backdropFilter: "blur(12px)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "12px",
-                minHeight: "200px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-              }}>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "8px",
-                }}>
-                  <RefreshCw size={16} style={{ animation: "spin 1s linear infinite", color: "#4fd8eb" }} />
-                  <span style={{ fontSize: "12px", color: "#4fd8eb", fontWeight: 600 }}>
-                    Regenerating message for {formatProductName(currentProductData?.product_name || currentProductData?.product_code || "")}...
-                  </span>
-                </div>
-                <div style={{
-                  background: "rgba(79, 216, 235, 0.1)",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  animation: "pulse 2s ease-in-out infinite",
-                }}>
-                  <div style={{ height: "12px", background: "rgba(79, 216, 235, 0.3)", borderRadius: "4px", marginBottom: "8px", width: "80%" }} />
-                  <div style={{ height: "12px", background: "rgba(79, 216, 235, 0.3)", borderRadius: "4px", marginBottom: "8px", width: "90%" }} />
-                  <div style={{ height: "12px", background: "rgba(79, 216, 235, 0.3)", borderRadius: "4px", width: "70%" }} />
-                </div>
-              </div>
-            )}
-            
             {/* Glassmorphic Editor - Professional Style */}
-            {!isSwitchingProduct && (
             <textarea
               value={draft}
               onChange={(e) => {
@@ -1581,7 +997,6 @@ WellBank Team`;
                 e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
               }}
             />
-            )}
             
             {/* Badge di Verifica - High-Trust Indicator */}
             {draft && complianceStatus.passed && (

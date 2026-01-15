@@ -11,3 +11,7 @@ CREATE INDEX IF NOT EXISTS idx_reco_summary_calculated ON recommendations(summar
 UPDATE recommendations SET summary_calculated = 1 WHERE summary_calculated IS NULL;
 
 
+
+
+
+

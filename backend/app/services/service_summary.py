@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Iterable, Set
 
-from app.core.service_catalog import SERVICE_CARDS, PRODUCT_DOMAIN_MAP
+from app.core.service_catalog import SERVICE_CARDS, PRODUCT_DOMAIN_MAP, PRODUCT_KEYWORDS
 
 
 UPLOADS_DIR = Path("uploads")  # your backend already uses /uploads
@@ -38,6 +38,11 @@ def _parse_date(s: str | None) -> datetime | None:
         except ValueError:
             pass
     return None
+
+
+def normalize_text(text: str) -> str:
+    """Normalize text for keyword matching (lowercase, strip whitespace)."""
+    return text.lower().strip()
 
 
 def _load_owned_products(possesso_csv: Path) -> Dict[str, Set[str]]:

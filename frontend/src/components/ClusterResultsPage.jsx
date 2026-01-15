@@ -42,6 +42,7 @@ import {
   Lightbulb,
   TrendingDown as TrendingDownIcon,
   ArrowLeft,
+  ChevronDown,
 } from "lucide-react";
 import RecommendationModalEnhanced from "./RecommendationModalEnhanced";
 import { getBatchRuns, getClusterSummary, getClusterCustomers, getClusterRecommendations, getClusterComparison } from "../api/clusters";
@@ -481,6 +482,75 @@ export default function ClusterResultsPage({ onNavigate, onBack }) {
     return `${(value * 100).toFixed(1)}%`;
   }
 
+  // Helper function to parse customer name from CSV or raw data
+  function parseCustomerName(data) {
+    if (!data) return null;
+    // If it's already a formatted name (no commas), return it
+    if (typeof data === 'string' && !data.includes(',')) {
+      return data;
+    }
+    // If it's CSV format, parse it
+    if (typeof data === 'string' && data.includes(',')) {
+      const parts = data.split(',');
+      if (parts.length >= 3) {
+        // Format: ID,Last,First,...
+        const lastName = parts[1]?.trim() || '';
+        const firstName = parts[2]?.trim() || '';
+        return `${firstName} ${lastName}`.trim() || parts[0]?.trim() || null;
+      }
+    }
+    return data;
+  }
+
+  // Helper function to format product codes to display names (case-insensitive)
+  function formatProductName(productCode) {
+    if (!productCode) return "Unknown Product";
+    
+    // Normalize input to uppercase for matching
+    const normalizedCode = productCode.toUpperCase().trim();
+    
+    // Product name mapping (all uppercase keys for case-insensitive matching)
+    const productMap = {
+      "BASIC_CHECKING": "Daily Flow Account",
+      "CCOR602": "MyEnergy Checking Account",
+      "CACR432": "AureaCard Exclusive",
+      "CACR748": "AureaCard Infinity",
+      "CADB439": "ZynaFlow Plus",
+      "CADB783": "EasyYoung Pay",
+      "CINV819": "SharesVault Investment",
+      "CRDT356": "FlexiCredit Line",
+      "DPAM682": "WealthPlus Managed Deposit",
+      "DPAM234": "SaveSmart Goal Account",
+      "DPAM891": "FutureSecure Pension Fund",
+      "PRPE771": "Premium Business+ Package",
+      "SINV263": "PlannerPro Advisory",
+      "BUSINESS_ACCOUNT": "Business Prime Account",
+      "MORTGAGE": "DreamHome Mortgage",
+      "QUICKCASH": "QuickCash Personal Loan",
+      "REWARDS_CREDIT": "Rewards Credit Card",
+      "PERSONAL_LOAN": "Personal Loan",
+      "MYENERGY": "MyEnergy Digital Account",
+    };
+    
+    // Check if it's a known product code (case-insensitive)
+    if (productMap[normalizedCode]) {
+      return productMap[normalizedCode];
+    }
+    
+    // Also check original case in case it's already formatted
+    if (productMap[productCode]) {
+      return productMap[productCode];
+    }
+    
+    // If it's already a display name (contains spaces or is readable), return as is
+    if (productCode.includes(' ') || productCode.length > 15) {
+      return productCode;
+    }
+    
+    // Otherwise, format the code to be more readable
+    return productCode.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
   // Calculate Next Best Actions
   const nextBestActions = useMemo(() => {
     try {
@@ -561,8 +631,9 @@ export default function ClusterResultsPage({ onNavigate, onBack }) {
         if (!rec) return false;
         if (!searchQuery) return true;
         const query = searchQuery.toLowerCase();
+        const parsedName = parseCustomerName(rec.customer_name) || '';
   return (
-          rec.customer_name?.toLowerCase().includes(query) ||
+          parsedName.toLowerCase().includes(query) ||
           rec.customer_id?.toLowerCase().includes(query) ||
           rec.product_code?.toLowerCase().includes(query)
         );
@@ -1436,7 +1507,7 @@ export default function ClusterResultsPage({ onNavigate, onBack }) {
                                     <div style={{ fontSize: "14px", color: "rgba(255, 255, 255, 0.8)", lineHeight: "1.6" }}>
                                       The <strong style={{ color: persona.color }}>{action.persona}</strong> segment has a{" "}
                                       <strong style={{ color: "#10b981" }}>{formatPercent(action.acceptanceRate)}</strong> acceptance rate for{" "}
-                                      <strong>{action.productCode}</strong>, but only{" "}
+                                      <strong>{formatProductName(action.productCode)}</strong>, but only{" "}
                                       <strong style={{ color: "#f59e0b" }}>{action.currentOwnership.toFixed(1)}%</strong> currently own this product.
                             </div>
                             </div>
@@ -1492,7 +1563,7 @@ export default function ClusterResultsPage({ onNavigate, onBack }) {
                                         Recommended Action
                                       </div>
                                       <div style={{ fontSize: "16px", color: "rgba(255, 255, 255, 0.8)" }}>
-                                        Launch targeted campaign for <strong>{action.productCode}</strong> to {action.opportunity} customers in the {action.persona} segment
+                                        Launch targeted campaign for <strong>{formatProductName(action.productCode)}</strong> to {action.opportunity} customers in the {action.persona} segment
                                       </div>
                                     </div>
                                   </div>
@@ -1525,23 +1596,65 @@ export default function ClusterResultsPage({ onNavigate, onBack }) {
                         <h3 style={{ fontSize: "20px", fontWeight: 700, color: "white" }}>
                           Product Recommendations Analysis
                         </h3>
-                        <div style={{ display: "flex", gap: "8px" }}>
+                        <div style={{ display: "flex", gap: "8px", position: "relative" }}>
                           <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
                             style={{
-                              padding: "8px 12px",
-                              background: "rgba(255, 255, 255, 0.1)",
-                              border: "1px solid rgba(255, 255, 255, 0.2)",
-                              borderRadius: "8px",
-                              color: "white",
-                              fontSize: "13.5px",
+                              padding: "12px 36px 12px 14px",
+                              background: "rgba(255, 255, 255, 0.12)",
+                              backdropFilter: "blur(10px)",
+                              border: "1.5px solid rgba(255, 255, 255, 0.25)",
+                              borderRadius: "10px",
+                              color: "#F8FAFC",
+                              fontSize: "14px",
+                              fontWeight: 500,
                               cursor: "pointer",
+                              outline: "none",
+                              appearance: "none",
+                              WebkitAppearance: "none",
+                              MozAppearance: "none",
+                              transition: "all 0.2s ease",
+                              minWidth: "180px",
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = "#4fd8eb";
+                              e.target.style.boxShadow = "0 0 0 3px rgba(79, 216, 235, 0.15)";
+                              e.target.style.background = "rgba(255, 255, 255, 0.15)";
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = "rgba(255, 255, 255, 0.25)";
+                              e.target.style.boxShadow = "none";
+                              e.target.style.background = "rgba(255, 255, 255, 0.12)";
                             }}
                           >
-                            <option value="revenue">Sort by Revenue</option>
-                            <option value="probability">Sort by Acceptance Rate</option>
+                            <option value="revenue" style={{ 
+                              background: "#1e293b", 
+                              color: "#F8FAFC",
+                              padding: "12px",
+                            }}>
+                              Sort by Revenue
+                            </option>
+                            <option value="probability" style={{ 
+                              background: "#1e293b", 
+                              color: "#F8FAFC",
+                              padding: "12px",
+                            }}>
+                              Sort by Acceptance Rate
+                            </option>
                           </select>
+                          <ChevronDown 
+                            size={18} 
+                            style={{ 
+                              position: "absolute",
+                              right: "12px",
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              pointerEvents: "none",
+                              color: "rgba(255, 255, 255, 0.5)",
+                              transition: "color 0.2s ease",
+                            }} 
+                          />
                         </div>
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
@@ -1567,7 +1680,7 @@ export default function ClusterResultsPage({ onNavigate, onBack }) {
                               }}
                             >
                               <div style={{ fontSize: "20px", fontWeight: 700, color: "white", marginBottom: "12px" }}>
-                          {product.product_code}
+                          {formatProductName(product.product_code)}
                         </div>
                               <div style={{ fontSize: "24px", fontWeight: 800, color: "#10b981", marginBottom: "16px" }}>
                                 {formatCurrency(product.total_expected_revenue || 0)}
@@ -1621,22 +1734,66 @@ export default function ClusterResultsPage({ onNavigate, onBack }) {
                             }}
                           />
                 </div>
-                        <select
-                          value={sortBy}
-                          onChange={(e) => setSortBy(e.target.value)}
-                          style={{
-                            padding: "12px 16px",
-                            background: "rgba(255, 255, 255, 0.1)",
-                            border: "1px solid rgba(255, 255, 255, 0.2)",
-                            borderRadius: "10px",
-                            color: "white",
-                            fontSize: "14px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <option value="revenue">Sort by Revenue</option>
-                          <option value="probability">Sort by Acceptance</option>
-                        </select>
+                        <div style={{ position: "relative" }}>
+                          <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            style={{
+                              padding: "12px 36px 12px 14px",
+                              background: "rgba(255, 255, 255, 0.12)",
+                              backdropFilter: "blur(10px)",
+                              border: "1.5px solid rgba(255, 255, 255, 0.25)",
+                              borderRadius: "10px",
+                              color: "#F8FAFC",
+                              fontSize: "14px",
+                              fontWeight: 500,
+                              cursor: "pointer",
+                              outline: "none",
+                              appearance: "none",
+                              WebkitAppearance: "none",
+                              MozAppearance: "none",
+                              transition: "all 0.2s ease",
+                              minWidth: "180px",
+                            }}
+                            onFocus={(e) => {
+                              e.target.style.borderColor = "#4fd8eb";
+                              e.target.style.boxShadow = "0 0 0 3px rgba(79, 216, 235, 0.15)";
+                              e.target.style.background = "rgba(255, 255, 255, 0.15)";
+                            }}
+                            onBlur={(e) => {
+                              e.target.style.borderColor = "rgba(255, 255, 255, 0.25)";
+                              e.target.style.boxShadow = "none";
+                              e.target.style.background = "rgba(255, 255, 255, 0.12)";
+                            }}
+                          >
+                            <option value="revenue" style={{ 
+                              background: "#1e293b", 
+                              color: "#F8FAFC",
+                              padding: "12px",
+                            }}>
+                              Sort by Revenue
+                            </option>
+                            <option value="probability" style={{ 
+                              background: "#1e293b", 
+                              color: "#F8FAFC",
+                              padding: "12px",
+                            }}>
+                              Sort by Acceptance
+                            </option>
+                          </select>
+                          <ChevronDown 
+                            size={18} 
+                            style={{ 
+                              position: "absolute",
+                              right: "12px",
+                              top: "50%",
+                              transform: "translateY(-50%)",
+                              pointerEvents: "none",
+                              color: "rgba(255, 255, 255, 0.5)",
+                              transition: "color 0.2s ease",
+                            }} 
+                          />
+                        </div>
               </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px", maxHeight: "500px", overflowY: "auto" }}>
@@ -1670,7 +1827,7 @@ export default function ClusterResultsPage({ onNavigate, onBack }) {
                           <div style={{ flex: 1 }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                                       <div style={{ fontSize: "16px", fontWeight: 700, color: "white" }}>
-                                {rec.customer_name || rec.customer_id}
+                                {parseCustomerName(rec.customer_name) || rec.customer_id}
                               </div>
               <div style={{
                                         padding: "4px 10px",
@@ -1696,7 +1853,7 @@ export default function ClusterResultsPage({ onNavigate, onBack }) {
                               )}
                             </div>
                                     <div style={{ fontSize: "14px", fontWeight: 600, color: "#4fd8eb", marginBottom: "4px" }}>
-                              {rec.product_code}
+                              {formatProductName(rec.product_code)}
                             </div>
                                     <div style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.6)" }}>
                                       Acceptance: {formatPercent(rec.acceptance_probability)} • 

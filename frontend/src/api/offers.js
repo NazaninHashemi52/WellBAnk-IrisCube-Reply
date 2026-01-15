@@ -87,7 +87,18 @@ export async function checkAIStatus() {
 }
 
 export async function getServicesByCategory() {
-  return apiRequest(`${API_BASE_URL}/offers/services-by-category`);
+  try {
+    return await apiRequest(`${API_BASE_URL}/offers/services-by-category`);
+  } catch (err) {
+    // Silently fail if endpoint doesn't exist (404) - this is an optional endpoint
+    // Check for 404 in error message (format: "Request failed with status 404" or "Not Found")
+    const errorMsg = err.message || err.toString() || '';
+    if (errorMsg.includes('404') || errorMsg.includes('Not Found') || errorMsg.includes('status 404')) {
+      return null; // Return null instead of throwing
+    }
+    // Re-throw other errors (network errors, 500s, etc.)
+    throw err;
+  }
 }
 
 export async function getCustomerRecommendations(customerId, runId = null) {

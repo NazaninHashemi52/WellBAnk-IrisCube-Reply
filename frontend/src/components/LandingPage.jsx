@@ -102,10 +102,9 @@ export default function LandingPage({ onNavigate }) {
           <div className="wbl-hero-content">
           <br />
             <h1 className="wbl-hero-title">
-             Own the Opportunity
-             <br />
-             <br />
-               <span className="wbl-hero-highlight">WellBank</span>
+              Own the Opportunity
+              <br />
+              <span className="wbl-hero-highlight">WellBank</span>
             </h1>
             <p className="wbl-hero-description">
             Empower your team with an AI-augmented Command Center. Replace manual segmentation with real-time machine learning insights that deepen customer loyalty and maximize portfolio growth.

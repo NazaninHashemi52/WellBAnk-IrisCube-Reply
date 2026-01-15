@@ -2,10 +2,10 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "Client Manager API"
+    APP_NAME: str = "WellBank CRM API"
     API_V1_STR: str = "/api/v1"
-    DATABASE_URL: str = "sqlite:///./clients.db"
-    UPLOAD_DIR: str = "uploads"   # <--- add this
+    DATABASE_URL: str = "sqlite:///./wellbank.db"
+    UPLOAD_DIR: str = "uploads"
     ANTHROPIC_API_KEY: str = ""  # Anthropic Claude API key for AI features
 
     class Config:

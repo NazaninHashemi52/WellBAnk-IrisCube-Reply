@@ -68,10 +68,10 @@ async def run_batch(
             )
         
         # Run in thread pool to avoid blocking the event loop
-        print("=" * 50)
-        print("Starting batch processing...")
-        print(f"Using {'category-based' if use_category_clustering else 'aggregated features'} clustering")
-        print("=" * 50)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info("Starting batch processing...")
+        logger.info(f"Using {'category-based' if use_category_clustering else 'aggregated features'} clustering")
         
         import time
         start_time = time.time()

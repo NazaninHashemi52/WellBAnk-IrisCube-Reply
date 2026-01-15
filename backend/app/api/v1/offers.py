@@ -11,8 +11,8 @@ router = APIRouter()
 # Product catalog - this should match your product catalog
 OFFER_CATALOG = {
     "REWARDS_CREDIT": {"display_name": "Rewards Credit Card", "category": "Credit Cards", "icon": "credit-card"},
-    "CADB439": {"display_name": "Cadb439 Investment", "category": "Investments", "icon": "trending-up"},
-    "CACR432": {"display_name": "Cacr432 Account", "category": "Accounts", "icon": "wallet"},
+    "CADB439": {"display_name": "ZynaFlow Plus", "category": "Credit", "icon": "credit-card"},
+    "CACR432": {"display_name": "AureaCard Exclusive", "category": "Credit Cards", "icon": "credit-card"},
     # Add more products as needed
 }
 
