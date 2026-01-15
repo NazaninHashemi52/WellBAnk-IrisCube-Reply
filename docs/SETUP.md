@@ -119,4 +119,3 @@ The application will be available at `http://localhost:5173`
 ## Production Deployment
 
 For production deployment, refer to the main README.md for additional configuration options.
-
